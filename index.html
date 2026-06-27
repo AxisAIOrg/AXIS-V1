@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="AXIS: A Growable Community-Driven Data Engine for Scalable Robot Manipulation." />
+  <meta property="og:title" content="AXIS: A Growable Community-Driven Data Engine" />
+  <meta property="og:description" content="Browser-based teleoperation, growable Franka manipulation data, IsaacSim augmentation, and π0.5 evaluation." />
+  <title>AXIS | Growable Robot Data Engine</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <nav class="toc" aria-label="Table of contents">
+    <h3>Content</h3>
+    <hr />
+    <a href="#abstract">Abstract</a>
+    <a href="#collection">Scalable Robot Data Collection</a>
+    <a href="#dataset">The AXIS Franka Dataset</a>
+    <a href="#experiments">Experiments</a>
+    <a href="#bibtex">BibTeX</a>
+  </nav>
+
+  <main class="main-content">
+    <header class="hero" id="top">
+      <div class="eyebrow">Capture • Dataset • Evaluation</div>
+
+      <h1>AXIS</h1>
+      <h2>A Growable Community-Driven Data Engine<br />for Scalable Robot Manipulation</h2>
+
+      <p class="authors">
+        Axis Robotics Team
+      </p>
+
+      <p class="hero-copy">
+        AXIS turns accessible browser-based teleoperation into a continuously growing, training-ready
+        robot manipulation dataset. It combines task generation, community demonstrations, automated
+        validation, trajectory refinement, IsaacSim augmentation, and fixed-protocol policy evaluation.
+      </p>
+
+      <div class="quick-links" aria-label="Project links">
+        <a href="assets/paper/AXIS_CoRL2026_full_paper_with_appendix.pdf">[paper]</a>
+        <a href="https://huggingface.co/datasets/axisrobotics/Franka-Dataset">[Dataset (Hugging Face)]</a>
+        <a href="https://hub.axisrobotics.ai/?tab=hub">[Platform]</a>
+        <a class="primary-link" href="data-browser/">Dataset Browser</a>
+      </div>
+
+      <section class="stats-strip" aria-label="Dataset snapshot">
+        <article><strong>917,313</strong><span>Trajectories counted</span></article>
+        <article><strong>1056h 32m</strong><span>Estimated duration</span></article>
+        <article><strong>1,006</strong><span>Tasks counted</span></article>
+        <article><strong>FR3</strong><span>Robot embodiment</span></article>
+      </section>
+
+      <section class="hero-media-card" aria-label="AXIS system overview">
+        <img
+          class="paper-figure"
+          src="assets/generated/teaser_simplified.png"
+          alt="AXIS system overview showing task generation, teleoperation, data cleaning, augmentation, policy learning, and real-world validation."
+        />
+        <p class="figure-caption">
+          AXIS system overview: task generation, browser-based teleoperation, offline data processing,
+          simulation augmentation, policy learning, and real-world validation.
+        </p>
+      </section>
+    </header>
+
+    <section class="section" id="abstract">
+      <div class="tagline">Abstract.</div>
+
+      <p>
+        Robot manipulation policies require diverse, high-quality demonstrations, but existing data
+        pipelines are hard to scale because they often rely on specialized hardware, centralized operators,
+        or fixed task suites. AXIS is a growable community-driven data engine and benchmark for scalable
+        manipulation learning.
+      </p>
+
+      <p>
+        AXIS collects demonstrations through browser-based MuJoCo-WASM teleoperation, generates and
+        validates new tasks automatically, and converts community demonstrations into training-ready data
+        through success checking, filtering, smoothing, resampling, and IsaacSim-based visual and physics
+        augmentation.
+      </p>
+
+      <p>
+        To make growth measurable, AXIS organizes data into task snapshots and evaluates policies with a
+        fixed held-out protocol. The current experiments compare representative vision-language-action
+        baselines and study scaling behavior across AXIS-25%, AXIS-50%, and AXIS-100%.
+      </p>
+    </section>
+
+    <section class="section" id="collection">
+      <div class="tagline">Scalable Robot Data Collection.</div>
+
+      <p class="pull-quote">
+        Collection stays lightweight in the browser; validation, rendering, augmentation, and learning run on the backend.
+      </p>
+
+      <p>
+        The AXIS collection layer separates latency-sensitive teleoperation from compute-heavy data
+        processing. Contributors operate a Franka Research 3 arm in a MuJoCo-WASM browser frontend
+        with commodity input devices, while uploaded trajectories are routed to backend machines for
+        validation, cleaning, replay, rendering, augmentation, and export.
+      </p>
+
+      <div class="pipeline-card">
+        <h3>Data engine stages</h3>
+        <ol class="stage-list">
+          <li><span>01</span> Task generation and asset normalization</li>
+          <li><span>02</span> Web-based MuJoCo-WASM teleoperation</li>
+          <li><span>03</span> Success checking and trajectory upload</li>
+          <li><span>04</span> Filtering, hesitation removal, smoothing, and resampling</li>
+          <li><span>05</span> IsaacSim visual and physics augmentation</li>
+          <li><span>06</span> VLA training, fixed-protocol evaluation, and real-world rollout</li>
+        </ol>
+      </div>
+
+      <div class="card-grid four-col">
+        <article>
+          <h3>Browser teleoperation</h3>
+          <p>
+            Contributors collect demonstrations without local simulator installation, GPUs, or specialized
+            robot hardware.
+          </p>
+        </article>
+
+        <article>
+          <h3>Unified trajectory format</h3>
+          <p>
+            Each episode stores task metadata, embodiment, simulator version, observations, states, actions,
+            and success information.
+          </p>
+        </article>
+
+        <article>
+          <h3>Quality refinement</h3>
+          <p>
+            Backend validation removes corrupted records, failed tasks, idle segments, jitter, and nonphysical
+            discontinuities.
+          </p>
+        </article>
+
+        <article>
+          <h3>Realistic augmentation</h3>
+          <p>
+            Scene, camera, lighting, texture, pose, friction, mass, and dynamics variations expand the
+            training distribution.
+          </p>
+        </article>
+      </div>
+
+      <figure>
+        <div class="stacked-media">
+          <video
+            class="media-frame"
+            controls
+            muted
+            playsinline
+            preload="metadata"
+            poster="assets/media/posters/scalable-collection-demo.jpg"
+          >
+            <source src="assets/media/scalable-collection-demo.mp4" type="video/mp4" />
+          </video>
+
+          <video
+            class="media-frame"
+            controls
+            muted
+            playsinline
+            preload="metadata"
+            poster="assets/media/posters/scalable-collection-demo-raw.jpg"
+          >
+            <source src="assets/media/scalable-collection-demo-raw.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption>
+          Browser-based teleoperation sessions showing remote task execution through the AXIS collection interface.
+        </figcaption>
+      </figure>
+
+    </section>
+
+    <section class="section" id="dataset">
+      <div class="tagline">The AXIS Franka Dataset.</div>
+
+      <p>
+        AXIS is a tabletop manipulation dataset built around a Franka Research 3 robot with a
+        parallel-jaw gripper. Each task includes a language instruction, a parameterized simulation scene,
+        task assets, and a structured success checker. Each trajectory provides synchronized robot states,
+        object states, robot actions, task metadata, success labels, and multi-view RGB-D observations.
+      </p>
+
+      <div class="dataset-panel">
+        <h3>Dataset snapshot</h3>
+        <dl class="snapshot-list">
+          <div><dt>Tasks</dt><dd>1,006</dd></div>
+          <div><dt>Trajectories</dt><dd>917,313</dd></div>
+          <div><dt>Duration</dt><dd>1056h 32m</dd></div>
+          <div><dt>Robot</dt><dd>Franka Research 3</dd></div>
+          <div><dt>Cameras</dt><dd>Third-view + wrist RGB-D</dd></div>
+          <div><dt>Evaluation</dt><dd>Fixed held-out protocol</dd></div>
+        </dl>
+      </div>
+
+      <figure>
+        <img
+          class="paper-figure"
+          src="assets/generated/data_overview.png"
+          alt="AXIS dataset overview showing dataset scale, trajectory schema, augmentation, data growth, and task distribution."
+        />
+        <figcaption>
+          Dataset overview covering scale, trajectory schema, validation and refinement, augmentation,
+          growth snapshots, and scene/skill distribution.
+        </figcaption>
+      </figure>
+
+      <figure>
+        <video
+          class="media-frame"
+          controls
+          muted
+          playsinline
+          preload="metadata"
+          poster="assets/ppt-media/posters/media1.jpg"
+        >
+          <source src="assets/ppt-media/videos/media1.mp4" type="video/mp4" />
+        </video>
+        <figcaption>
+          Browser collection workflow for a manipulation task, including on-screen controls and simulator feedback.
+        </figcaption>
+      </figure>
+
+      <div class="subsection-title">Trajectory refinement</div>
+
+      <p>
+        Raw community demonstrations may contain hesitation, jitter, low-frequency sampling artifacts,
+        or invalid transitions. AXIS filters and refines these demonstrations before converting them into
+        policy-learning data.
+      </p>
+
+      <div class="table-wrap" role="region" aria-label="Trajectory refinement table" tabindex="0">
+        <table>
+          <caption>Effect of data refinement on teleoperation trajectory quality.</caption>
+          <thead>
+            <tr>
+              <th>Data Version</th>
+              <th>Sampling Rate</th>
+              <th>Mean Acceleration</th>
+              <th>Mean Jerk</th>
+              <th>Replay Success</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Raw Teleoperation</td>
+              <td>5.0 Hz</td>
+              <td>1.3539</td>
+              <td>11.5899</td>
+              <td>100.0%</td>
+            </tr>
+            <tr>
+              <td>Smoothed</td>
+              <td>5.0 Hz</td>
+              <td>0.6382</td>
+              <td>2.9160</td>
+              <td>91.4%</td>
+            </tr>
+            <tr class="ours">
+              <td>Smoothed + Resampled</td>
+              <td>20 Hz</td>
+              <td>0.4885</td>
+              <td>2.2243</td>
+              <td>86.2%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure>
+        <img
+          src="assets/ppt-media/images/image4.png"
+          alt="Augmentation diversity across example AXIS manipulation tasks."
+        />
+        <figcaption>
+          Augmentation diversity across example tasks, covering randomized appearance, lighting,
+          environments, and object poses.
+        </figcaption>
+      </figure>
+
+      <div class="subsection-title">A living benchmark</div>
+
+      <p>
+        Instead of treating the dataset as a one-time release, AXIS organizes training data into
+        progressively larger snapshots. AXIS-25%, AXIS-50%, AXIS-100%, and future versions preserve
+        shared data format, task definitions, success checkers, rollout budgets, and evaluation tasks,
+        so scaling studies can isolate the effect of training coverage.
+      </p>
+
+      <div class="snapshot-timeline" aria-label="Dataset growth snapshots">
+        <div><span>AXIS-25%</span><strong>low-volume scaling point</strong></div>
+        <div><span>AXIS-50%</span><strong>mid-scale task coverage</strong></div>
+        <div><span>AXIS-100%</span><strong>current full snapshot</strong></div>
+        <div><span>AXIS-...</span><strong>future growable releases</strong></div>
+      </div>
+
+      <figure>
+        <img
+          src="assets/ppt-media/images/image3.png"
+          alt="Grid of augmented tabletop simulation scenes with varied backgrounds and object layouts."
+        />
+        <figcaption>
+          Additional augmented tabletop scenes with varied backgrounds, lighting, surface textures,
+          object layouts, and camera viewpoints.
+        </figcaption>
+      </figure>
+
+      <figure>
+        <img
+          src="assets/ppt-media/images/image7.png"
+          alt="Simulation scenes spanning kitchen, tabletop, mug, and object manipulation tasks."
+        />
+        <figcaption>
+          Scene and object diversity across simulated Franka manipulation tasks.
+        </figcaption>
+      </figure>
+
+      <div class="pipeline-card soft">
+        <h3>What the dataset contains</h3>
+        <div class="chip-cloud" aria-label="AXIS data fields">
+          <span>language instruction</span>
+          <span>task assets</span>
+          <span>success checker</span>
+          <span>robot states</span>
+          <span>object states</span>
+          <span>robot actions</span>
+          <span>third-view RGB-D</span>
+          <span>wrist RGB-D</span>
+          <span>metadata</span>
+          <span>failure labels</span>
+        </div>
+      </div>
+
+      <div class="subsection-title">Simulation demos</div>
+
+      <div class="video-grid compact-video-grid">
+        <figure class="video-card">
+          <video controls muted playsinline preload="metadata" poster="assets/ppt-media/posters/media2.jpg">
+            <source src="assets/ppt-media/videos/media2.mp4" type="video/mp4" />
+          </video>
+          <figcaption>Same task with different augmentation settings.</figcaption>
+        </figure>
+
+        <figure class="video-card">
+          <video controls muted playsinline preload="metadata" poster="assets/ppt-media/posters/media3.jpg">
+            <source src="assets/ppt-media/videos/media3.mp4" type="video/mp4" />
+          </video>
+          <figcaption>Different task setup with varied scene assets and initial conditions.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section" id="experiments">
+      <div class="tagline">Experiments.</div>
+
+      <p>
+        The experiments evaluate whether AXIS pretraining improves downstream LIBERO-Plus robustness
+        for π0.5, whether the improvement scales with AXIS data volume, and which perturbation axes
+        benefit most from AXIS-style augmentation and task diversity.
+      </p>
+
+      <div class="result-callout">
+        <strong>Headline result.</strong>
+        π0.5 + AXIS-100% reaches <b>79.4</b> overall LIBERO-Plus success, compared with
+        <b>66.5</b> for vanilla π0.5 and <b>57.5</b> for a RoboCasa-matched simulation baseline.
+      </div>
+
+      <div class="table-wrap" role="region" aria-label="Main result table" tabindex="0">
+        <table>
+          <caption>Main result on LIBERO-Plus.</caption>
+          <thead>
+            <tr>
+              <th>Pretraining</th>
+              <th># demos</th>
+              <th>Overall ↑</th>
+              <th>Cam.</th>
+              <th>Light</th>
+              <th>Noise</th>
+              <th>B.G.</th>
+              <th>Layout</th>
+              <th>Lang.</th>
+              <th>Robot</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>π0.5 vanilla</td>
+              <td>0</td>
+              <td>66.5</td>
+              <td>50.3</td>
+              <td>90.6</td>
+              <td>61.8</td>
+              <td>87.7</td>
+              <td>61.7</td>
+              <td>71.9</td>
+              <td>54.8</td>
+            </tr>
+            <tr>
+              <td>π0.5 + AXIS-25%</td>
+              <td>0.25 N<sub>AXIS</sub></td>
+              <td>72.0</td>
+              <td>56.1</td>
+              <td>91.8</td>
+              <td>68.1</td>
+              <td>89.1</td>
+              <td>72.1</td>
+              <td>76.0</td>
+              <td>61.3</td>
+            </tr>
+            <tr>
+              <td>π0.5 + AXIS-50%</td>
+              <td>0.50 N<sub>AXIS</sub></td>
+              <td>75.1</td>
+              <td>59.7</td>
+              <td>92.5</td>
+              <td>72.5</td>
+              <td>89.6</td>
+              <td>77.9</td>
+              <td>78.3</td>
+              <td>65.1</td>
+            </tr>
+            <tr class="ours">
+              <td>π0.5 + AXIS-100% (ours)</td>
+              <td>N<sub>AXIS</sub></td>
+              <td>79.4</td>
+              <td>65.5</td>
+              <td>93.1</td>
+              <td>78.5</td>
+              <td>90.4</td>
+              <td>84.9</td>
+              <td>81.1</td>
+              <td>70.2</td>
+            </tr>
+            <tr>
+              <td>π0.5 + RoboCasa-matched</td>
+              <td>N<sub>AXIS</sub></td>
+              <td>57.5</td>
+              <td>35.2</td>
+              <td>79.5</td>
+              <td>63.2</td>
+              <td>81.7</td>
+              <td>68.0</td>
+              <td>49.2</td>
+              <td>39.4</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="subsection-title">Per-perturbation robustness</div>
+
+      <div class="card-grid four-col compact">
+        <article>
+          <h3>Layout</h3>
+          <strong>+23.2</strong>
+          <p>Largest gain over vanilla, matching AXIS spatial randomization.</p>
+        </article>
+
+        <article>
+          <h3>Sensor Noise</h3>
+          <strong>+16.7</strong>
+          <p>Robustness improves under photometric observation shifts.</p>
+        </article>
+
+        <article>
+          <h3>Robot Pose</h3>
+          <strong>+15.4</strong>
+          <p>AXIS helps beyond explicitly randomized perturbation axes.</p>
+        </article>
+
+        <article>
+          <h3>Camera</h3>
+          <strong>+15.2</strong>
+          <p>Viewpoint variation transfers to LIBERO-Plus camera shifts.</p>
+        </article>
+      </div>
+
+      <div class="table-wrap" role="region" aria-label="Perturbation table" tabindex="0">
+        <table>
+          <caption>AXIS-100% improvements by perturbation axis.</caption>
+          <thead>
+            <tr>
+              <th>Axis</th>
+              <th>π0.5 vanilla</th>
+              <th>+ AXIS-25%</th>
+              <th>+ AXIS-100%</th>
+              <th>+ RoboCasa-m.</th>
+              <th>∆van</th>
+              <th>AXIS−RC</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Camera</td>
+              <td>50.3</td>
+              <td>56.1</td>
+              <td>65.5</td>
+              <td>35.2</td>
+              <td>+15.2</td>
+              <td>+30.3</td>
+            </tr>
+            <tr>
+              <td>Light</td>
+              <td>90.6</td>
+              <td>91.8</td>
+              <td>93.1</td>
+              <td>79.5</td>
+              <td>+2.5</td>
+              <td>+13.6</td>
+            </tr>
+            <tr>
+              <td>Sensor Noise</td>
+              <td>61.8</td>
+              <td>68.1</td>
+              <td>78.5</td>
+              <td>63.2</td>
+              <td>+16.7</td>
+              <td>+15.3</td>
+            </tr>
+            <tr>
+              <td>Background</td>
+              <td>87.7</td>
+              <td>89.1</td>
+              <td>90.4</td>
+              <td>81.7</td>
+              <td>+2.7</td>
+              <td>+8.7</td>
+            </tr>
+            <tr>
+              <td>Layout</td>
+              <td>61.7</td>
+              <td>72.1</td>
+              <td>84.9</td>
+              <td>68.0</td>
+              <td>+23.2</td>
+              <td>+16.9</td>
+            </tr>
+            <tr>
+              <td>Language</td>
+              <td>71.9</td>
+              <td>76.0</td>
+              <td>81.1</td>
+              <td>49.2</td>
+              <td>+9.2</td>
+              <td>+31.9</td>
+            </tr>
+            <tr>
+              <td>Robot</td>
+              <td>54.8</td>
+              <td>61.3</td>
+              <td>70.2</td>
+              <td>39.4</td>
+              <td>+15.4</td>
+              <td>+30.8</td>
+            </tr>
+            <tr class="ours">
+              <td>Overall</td>
+              <td>66.5</td>
+              <td>72.0</td>
+              <td>79.4</td>
+              <td>57.5</td>
+              <td>+12.9</td>
+              <td>+21.9</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="subsection-title">Real-world rollouts</div>
+
+      <figure>
+        <div class="video-grid">
+          <figure class="video-card">
+            <video controls muted playsinline preload="metadata" poster="assets/ppt-media/posters/media4.jpg">
+              <source src="assets/ppt-media/videos/media4.mp4" type="video/mp4" />
+            </video>
+            <figcaption>Third-view rollout with tabletop grocery objects.</figcaption>
+          </figure>
+
+          <figure class="video-card">
+            <video controls muted playsinline preload="metadata" poster="assets/ppt-media/posters/media5.jpg">
+              <source src="assets/ppt-media/videos/media5.mp4" type="video/mp4" />
+            </video>
+            <figcaption>Third-view rollout under the same real-world setup.</figcaption>
+          </figure>
+
+          <figure class="video-card">
+            <video controls muted playsinline preload="metadata" poster="assets/ppt-media/posters/media6.jpg">
+              <source src="assets/ppt-media/videos/media6.mp4" type="video/mp4" />
+            </video>
+            <figcaption>Wrist-view rollout with close-up manipulation observations.</figcaption>
+          </figure>
+
+          <figure class="video-card">
+            <video controls muted playsinline preload="metadata" poster="assets/ppt-media/posters/media7.jpg">
+              <source src="assets/ppt-media/videos/media7.mp4" type="video/mp4" />
+            </video>
+            <figcaption>Wrist-view rollout with top-down task observations.</figcaption>
+          </figure>
+        </div>
+        <figcaption>
+          Real-world Franka rollout videos under third-view and wrist-view observations.
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="section" id="bibtex">
+      <div class="tagline">BibTeX.</div>
+
+      <div class="bibtex-code">
+        <div class="bibtex-title">
+          BibTeX
+          <button id="copy-bibtex" type="button">Copy</button>
+        </div>
+
+<pre><code>@misc{axis2026growable,
+  title        = {AXIS: A Growable Community-Driven Data Engine for Scalable Robot Manipulation},
+  author       = {{Axis Robotics Team}},
+  year         = {2026},
+  note         = {CoRL 2026 submission}
+}</code></pre>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>© 2026 Axis Robotics Team. Website scaffold for the AXIS project page.</p>
+      <p><a href="#top">Back to top ↑</a></p>
+    </footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

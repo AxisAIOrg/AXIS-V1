@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AXIS Data Browser</title>
+  <meta name="description" content="Browse full AXIS clean LeRobot demo records, task metadata, and real preview clips in a compact dark explorer.">
+  <meta property="og:title" content="AXIS Data Browser">
+  <meta property="og:description" content="Demo-level browser for AXIS-Datasets with compact filtering, table browsing, and detail preview.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="./assets/images/demo-poster.jpg">
+  <link rel="icon" href="./assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./assets/css/styles.css">
+  <link rel="stylesheet" href="./assets/css/browser.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./browser.html" aria-label="AXIS Data Browser home">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span>
+          <strong>AXIS</strong>
+          <small>Data Browser</small>
+        </span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="#showcase">Demos</a>
+        <a href="#augmentation">Augmentation</a>
+        <a class="nav-cta" href="#explorer">Explorer</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="browser-hero">
+      <div class="browser-hero-glow" aria-hidden="true"></div>
+      <div class="container browser-hero-grid">
+        <div class="browser-hero-copy">
+          <p class="kicker">Research Explorer</p>
+          <h1>AXIS Data Browser</h1>
+          <p class="hero-tagline">Representative previews for exported tasks, with coverage metrics computed from local LeRobot demos and the remote ready queue.</p>
+          <div class="button-row">
+            <a class="btn btn-primary" href="#explorer">Open explorer</a>
+          </div>
+        </div>
+        <div class="browser-hero-panel" aria-label="Browser summary">
+          <div>
+            <strong id="browser-total-episodes">200</strong>
+            <span>trajectories counted</span>
+          </div>
+          <div>
+            <strong id="browser-total-duration">0h</strong>
+            <span>estimated duration</span>
+          </div>
+          <div>
+            <strong id="browser-total-tasks">200</strong>
+            <span>tasks counted</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-showcase" id="showcase" aria-labelledby="showcase-heading">
+      <div class="container">
+        <div class="browser-section-head">
+          <p class="kicker">Dataset Showcase</p>
+          <h2 id="showcase-heading">Robot manipulation demos</h2>
+          <p>Representative AXIS clips covering every exported task from <span class="nowrap">data_lerobot</span>.</p>
+        </div>
+        <div class="showcase-grid">
+          <article class="showcase-card">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="./assets/videos/task-demos/task-800-third-person.mp4" type="video/mp4">
+            </video>
+            <span>Put the Scissors on the Gift Box</span>
+          </article>
+          <article class="showcase-card">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="./assets/videos/task-demos/task-801-third-person.mp4" type="video/mp4">
+            </video>
+            <span>Put the Tape on the Ribbon Roll</span>
+          </article>
+          <article class="showcase-card">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="./assets/videos/task-demos/task-802-third-person.mp4" type="video/mp4">
+            </video>
+            <span>Put the Tape beside the Scissors</span>
+          </article>
+          <article class="showcase-card">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="./assets/videos/task-demos/task-806-third-person.mp4" type="video/mp4">
+            </video>
+            <span>Put the Juice on the Napkin Box</span>
+          </article>
+          <article class="showcase-card">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="./assets/videos/task-demos/task-808-third-person.mp4" type="video/mp4">
+            </video>
+            <span>Separate the Sandwich from the Apple</span>
+          </article>
+          <article class="showcase-card">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="./assets/videos/task-demos/task-1002-third-person.mp4" type="video/mp4">
+            </video>
+            <span>Put the Microphone on the Speaker</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="augmentation-section" id="augmentation" aria-labelledby="augmentation-heading">
+      <div class="container augmentation-layout">
+        <div class="augmentation-copy">
+          <p class="kicker">Data Augmentation</p>
+          <h2 id="augmentation-heading">Training variants anchored to each source demo</h2>
+          <p>Local LeRobot episodes keep the original trajectory metadata while expanding visual coverage across paired camera views, lighting shifts, and scene-level variation.</p>
+          <div class="augmentation-metrics" aria-label="Augmentation coverage">
+            <div>
+              <strong>2 RGB views</strong>
+              <span>third-person + wrist</span>
+            </div>
+            <div>
+              <strong>30 Hz</strong>
+              <span>aligned frame timing</span>
+            </div>
+            <div>
+              <strong>Local stats</strong>
+              <span>duration + demo count</span>
+            </div>
+          </div>
+        </div>
+        <div class="augmentation-visual-stage">
+          <article class="augmentation-preview augmentation-preview-main">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="./assets/videos/task-demos/task-800-third-person.mp4" type="video/mp4">
+            </video>
+            <div>
+              <strong>Source trajectory</strong>
+              <span>Third-person RGB</span>
+            </div>
+          </article>
+          <div class="augmentation-strip">
+            <article class="augmentation-preview tone-wrist">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-800-wrist.mp4" type="video/mp4">
+              </video>
+              <div>
+                <strong>Wrist alignment</strong>
+                <span>paired camera stream</span>
+              </div>
+            </article>
+            <article class="augmentation-preview tone-light">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-806-third-person.mp4" type="video/mp4">
+              </video>
+              <div>
+                <strong>Light variation</strong>
+                <span>exposure and color shift</span>
+              </div>
+            </article>
+            <article class="augmentation-preview tone-scene">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-1002-third-person.mp4" type="video/mp4">
+              </video>
+              <div>
+                <strong>Scene coverage</strong>
+                <span>task-level context mix</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="browser-shell" id="explorer">
+      <div class="container">
+        <div class="explorer-header">
+          <div>
+            <p class="kicker">Explorer</p>
+            <h2>Demo-level dataset access</h2>
+            <p>Filter representative rendered clips, scan counted trajectory coverage, then preview the selected episode and core metadata.</p>
+          </div>
+          <div class="explorer-stat-grid" aria-label="Filtered browser summary">
+            <div>
+              <strong id="filtered-records">200</strong>
+              <span>Trajectories</span>
+            </div>
+            <div>
+              <strong id="visible-duration">0m</strong>
+              <span>Estimated duration</span>
+            </div>
+            <div>
+              <strong id="filtered-tasks">200</strong>
+              <span>Tasks counted</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="browser-filters" aria-label="Dataset filters">
+          <label class="filter-field search-field">
+            <span>Search</span>
+            <input id="task-search" type="search" placeholder="Search demos, tasks, scenes, or objects">
+          </label>
+          <label class="filter-field">
+            <span>Category</span>
+            <select id="category-filter">
+              <option value="all">All categories</option>
+            </select>
+          </label>
+          <label class="filter-field">
+            <span>Difficulty</span>
+            <select id="difficulty-filter">
+              <option value="all">All difficulty</option>
+              <option value="1">1 star</option>
+              <option value="2">2 stars</option>
+              <option value="3">3 stars</option>
+              <option value="4">4 stars</option>
+              <option value="5">5 stars</option>
+            </select>
+          </label>
+          <button class="btn btn-primary" id="apply-filters" type="button">Apply</button>
+        </div>
+
+        <div class="browser-layout">
+          <section class="table-pane" aria-label="Demo records">
+            <div class="table-summary">
+              <div>
+                <strong id="visible-task-count">18</strong>
+                <span id="visible-task-label">visible on this page</span>
+              </div>
+              <span class="browser-note">Representative clips</span>
+            </div>
+            <div class="table-scroller">
+              <table class="explorer-table">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Category</th>
+                    <th>Collector</th>
+                    <th>Frames</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody id="task-list"></tbody>
+              </table>
+            </div>
+            <div class="browser-pagination">
+              <span id="page-label">Page 1</span>
+              <div>
+                <button class="btn" id="prev-page" type="button">Previous</button>
+                <button class="btn" id="next-page" type="button">Next</button>
+              </div>
+            </div>
+          </section>
+
+          <aside class="task-detail" aria-label="Selected demo detail">
+            <div class="detail-video-frame">
+              <video id="detail-video" controls muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-800-third-person.mp4" type="video/mp4">
+              </video>
+            </div>
+            <div class="camera-toggle" id="camera-toggle" aria-label="Camera view">
+              <button class="is-active" type="button" data-camera-view="thirdPerson">Third-person</button>
+              <button type="button" data-camera-view="wrist">Wrist</button>
+            </div>
+            <div class="detail-head">
+              <p class="kicker" id="detail-kicker">Demo detail</p>
+              <h3 id="detail-title">Put the Scissors on the Gift Box</h3>
+              <p id="detail-record-id">AXIS-800-DEMO</p>
+            </div>
+            <div id="task-summary" class="detail-meta-grid"></div>
+            <div class="detail-block">
+              <span>Description</span>
+              <p id="detail-description">Demo description will load here.</p>
+            </div>
+            <div class="detail-block">
+              <span>Objects</span>
+              <div class="object-chips" id="detail-tags"></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <p>AXIS Data Browser</p>
+      <div class="footer-links">
+        <a href="#showcase">Demos</a>
+        <a href="#augmentation">Augmentation</a>
+        <a href="#explorer">Explorer</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./assets/js/browser-data.js"></script>
+  <script src="./assets/js/browser.js"></script>
+  <script src="./assets/js/site.js"></script>
+</body>
+</html>
