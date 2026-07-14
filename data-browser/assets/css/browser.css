@@ -52,9 +52,8 @@
   --teal: #00ff59;
   --accent: #00ff59;
   --radius: 12px;
-  --frame: 1440px;
   --gutter: 20px;
-  --container: var(--frame);
+  --container: 100%;
   --font: "Switzer", "Borna", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --tracking: -0.02em;
   color: var(--ink);
@@ -63,13 +62,13 @@
   letter-spacing: var(--tracking);
 }
 
-/* Main content: fixed 1440 canvas, centered. Section backgrounds stay full-bleed. */
+/* Full-bleed content width; fixed side gutters only (no 1440 max-width). */
 .page-browser .container {
   box-sizing: border-box;
-  width: min(var(--frame), 100%);
-  max-width: var(--frame);
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
   padding-left: var(--gutter);
   padding-right: var(--gutter);
 }
@@ -620,13 +619,15 @@
   flex-direction: column;
   align-items: center;
   gap: 40px;
-  max-width: 1080px;
-  margin: 0 auto 40px;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 40px;
   text-align: center;
 }
 
 .explorer-intro {
-  max-width: 730px;
+  width: 100%;
+  max-width: none;
 }
 
 .explorer-intro h2 {
@@ -687,8 +688,9 @@
   grid-template-columns: minmax(0, 1fr) 190px 190px 100px;
   gap: 12px;
   align-items: end;
-  max-width: 1080px;
-  margin: 0 auto 40px;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 40px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -789,11 +791,12 @@
 
 .browser-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
   gap: 16px;
   align-items: start;
-  max-width: 1080px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .table-pane {
@@ -1133,9 +1136,9 @@
   content: "#";
 }
 
-/* ——— Footer: full-bleed, Figma 3764:2389 corner layout ——— */
+/* ——— Footer: full-bleed, corner layout, fixed gutters only ——— */
 .page-browser .footer {
-  --footer-right: max(20px, calc(100% - 651px)); /* 1440 design: links at x=789 */
+  --footer-links-w: 461px;
   position: relative;
   overflow: hidden;
   width: 100%;
@@ -1175,15 +1178,16 @@
 
 .page-browser .footer-mark {
   position: absolute;
-  left: 20px;
-  top: 20px;
+  left: var(--gutter);
+  top: var(--gutter);
   width: 120px;
   height: auto;
 }
 
 .page-browser .footer-title {
   position: absolute;
-  left: var(--footer-right);
+  right: var(--gutter);
+  left: auto;
   top: 7px;
   margin: 0;
   color: #fff;
@@ -1193,18 +1197,19 @@
   line-height: 1.1;
   letter-spacing: -0.02em;
   white-space: nowrap;
-  text-align: left;
+  text-align: right;
   transform: none;
 }
 
 .page-browser .footer-links {
   position: absolute;
-  left: var(--footer-right);
+  right: var(--gutter);
+  left: auto;
   top: 135px;
   display: flex;
   gap: 24px;
-  width: 461px;
-  max-width: calc(100% - 40px);
+  width: var(--footer-links-w);
+  max-width: calc(100% - (var(--gutter) * 2));
   margin: 0;
 }
 
@@ -1226,13 +1231,13 @@
 
 .page-browser .footer-tagline {
   position: absolute;
-  left: 20px;
+  left: var(--gutter);
   top: 507px;
   display: flex;
   flex-direction: column;
   gap: 24px;
   width: 452px;
-  max-width: calc(100% - 40px);
+  max-width: calc(100% - (var(--gutter) * 2));
 }
 
 .page-browser .footer-tagline p {
@@ -1255,7 +1260,9 @@
 
 .page-browser .footer-social {
   position: absolute;
-  left: var(--footer-right);
+  /* Align under links column start (links are right-anchored). */
+  right: calc(var(--gutter) + var(--footer-links-w) - 72px);
+  left: auto;
   top: 576px;
   display: flex;
   gap: 8px;
@@ -1283,7 +1290,6 @@
 /* ——— Responsive ——— */
 @media (max-width: 1100px) {
   .page-browser .footer {
-    --footer-right: 20px;
     height: auto;
     min-height: 0;
   }
@@ -1293,7 +1299,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 28px;
-    padding: 40px 20px 48px;
+    padding: 40px var(--gutter) 48px;
   }
 
   .page-browser .footer-mark,
@@ -1303,16 +1309,18 @@
   .page-browser .footer-social {
     position: static;
     left: auto;
+    right: auto;
     top: auto;
   }
 
   .page-browser .footer-title {
     font-size: clamp(40px, 8vw, 64px);
     white-space: normal;
+    text-align: left;
   }
 
   .page-browser .footer-links {
-    width: min(461px, 100%);
+    width: min(var(--footer-links-w), 100%);
   }
 
   .page-browser .footer-tagline {
