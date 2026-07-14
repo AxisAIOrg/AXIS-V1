@@ -1133,7 +1133,7 @@
   content: "#";
 }
 
-/* ——— Footer: full-bleed, corner layout, fixed gutters only ——— */
+/* ——— Footer: black bg full-bleed; content locked to 1440 frame ——— */
 .page-browser .footer {
   --footer-links-w: 461px;
   position: relative;
@@ -1166,10 +1166,10 @@
   z-index: 1;
   box-sizing: border-box;
   display: block !important;
-  width: 100%;
-  max-width: none;
+  width: min(var(--frame), 100%);
+  max-width: var(--frame);
   height: 100%;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
 }
 
