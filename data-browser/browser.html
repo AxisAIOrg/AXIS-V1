@@ -13,15 +13,11 @@
   <link rel="stylesheet" href="./assets/css/styles.css">
   <link rel="stylesheet" href="./assets/css/browser.css">
 </head>
-<body>
+<body class="page-browser">
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="./browser.html" aria-label="AXIS Data Browser home">
-        <span class="brand-mark" aria-hidden="true">A</span>
-        <span>
-          <strong>AXIS</strong>
-          <small>Data Browser</small>
-        </span>
+      <a class="brand" href="./browser.html" aria-label="AXIS Robotics home">
+        <img class="brand-logo" src="./assets/images/brand/logo-axis-white.svg" alt="AXIS Robotics" width="152" height="40">
       </a>
       <button class="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
         <span></span>
@@ -38,75 +34,94 @@
 
   <main>
     <section class="browser-hero">
-      <div class="browser-hero-glow" aria-hidden="true"></div>
+      <div class="browser-hero-bg" aria-hidden="true">
+        <video class="browser-hero-video" autoplay muted loop playsinline preload="auto">
+          <source src="./assets/images/brand/digital-network-data-connections-abstract-technolo-2026-01-28-02-39-52-utc_1.mp4" type="video/mp4">
+        </video>
+      </div>
       <div class="container browser-hero-grid">
         <div class="browser-hero-copy">
-          <p class="kicker">Research Explorer</p>
           <h1>AXIS Data Browser</h1>
           <p class="hero-tagline">Representative previews for exported tasks, with coverage metrics computed from local LeRobot demos and the remote ready queue.</p>
           <div class="button-row">
-            <a class="btn btn-primary" href="#explorer">Open explorer</a>
+            <a class="btn btn-primary" href="#explorer">Open Explorer</a>
           </div>
         </div>
         <div class="browser-hero-panel" aria-label="Browser summary">
           <div>
             <strong id="browser-total-episodes">200</strong>
-            <span>trajectories counted</span>
+            <span>Trajectories Counted</span>
           </div>
           <div>
             <strong id="browser-total-duration">0h</strong>
-            <span>estimated duration</span>
+            <span>Estimated Duration</span>
           </div>
           <div>
             <strong id="browser-total-tasks">200</strong>
-            <span>tasks counted</span>
+            <span>Tasks Counted</span>
           </div>
         </div>
       </div>
+      <a class="hero-scroll" href="#showcase" aria-label="Scroll to demos">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M3.5 5.25L7 8.75L10.5 5.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
     </section>
 
     <section class="demo-showcase" id="showcase" aria-labelledby="showcase-heading">
       <div class="container">
         <div class="browser-section-head">
-          <p class="kicker">Dataset Showcase</p>
           <h2 id="showcase-heading">Robot manipulation demos</h2>
           <p>Representative AXIS clips covering every exported task from <span class="nowrap">data_lerobot</span>.</p>
         </div>
         <div class="showcase-grid">
           <article class="showcase-card">
-            <video autoplay muted loop playsinline preload="metadata">
-              <source src="./assets/videos/task-demos/task-800-third-person.mp4" type="video/mp4">
-            </video>
+            <div class="showcase-media">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-800-third-person.mp4" type="video/mp4">
+              </video>
+            </div>
             <span>Put the Scissors on the Gift Box</span>
           </article>
           <article class="showcase-card">
-            <video autoplay muted loop playsinline preload="metadata">
-              <source src="./assets/videos/task-demos/task-801-third-person.mp4" type="video/mp4">
-            </video>
+            <div class="showcase-media">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-801-third-person.mp4" type="video/mp4">
+              </video>
+            </div>
             <span>Put the Tape on the Ribbon Roll</span>
           </article>
           <article class="showcase-card">
-            <video autoplay muted loop playsinline preload="metadata">
-              <source src="./assets/videos/task-demos/task-802-third-person.mp4" type="video/mp4">
-            </video>
+            <div class="showcase-media">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-802-third-person.mp4" type="video/mp4">
+              </video>
+            </div>
             <span>Put the Tape beside the Scissors</span>
           </article>
           <article class="showcase-card">
-            <video autoplay muted loop playsinline preload="metadata">
-              <source src="./assets/videos/task-demos/task-806-third-person.mp4" type="video/mp4">
-            </video>
+            <div class="showcase-media">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-806-third-person.mp4" type="video/mp4">
+              </video>
+            </div>
             <span>Put the Juice on the Napkin Box</span>
           </article>
           <article class="showcase-card">
-            <video autoplay muted loop playsinline preload="metadata">
-              <source src="./assets/videos/task-demos/task-808-third-person.mp4" type="video/mp4">
-            </video>
+            <div class="showcase-media">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-808-third-person.mp4" type="video/mp4">
+              </video>
+            </div>
             <span>Separate the Sandwich from the Apple</span>
           </article>
           <article class="showcase-card">
-            <video autoplay muted loop playsinline preload="metadata">
-              <source src="./assets/videos/task-demos/task-1002-third-person.mp4" type="video/mp4">
-            </video>
+            <div class="showcase-media">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-1002-third-person.mp4" type="video/mp4">
+              </video>
+            </div>
             <span>Put the Microphone on the Speaker</span>
           </article>
         </div>
@@ -116,7 +131,6 @@
     <section class="augmentation-section" id="augmentation" aria-labelledby="augmentation-heading">
       <div class="container augmentation-layout">
         <div class="augmentation-copy">
-          <p class="kicker">Data Augmentation</p>
           <h2 id="augmentation-heading">Training variants anchored to each source demo</h2>
           <p>Local LeRobot episodes keep the original trajectory metadata while expanding visual coverage across paired camera views, lighting shifts, and scene-level variation.</p>
           <div class="augmentation-metrics" aria-label="Augmentation coverage">
@@ -136,40 +150,48 @@
         </div>
         <div class="augmentation-visual-stage">
           <article class="augmentation-preview augmentation-preview-main">
-            <video autoplay muted loop playsinline preload="metadata">
-              <source src="./assets/videos/task-demos/task-800-third-person.mp4" type="video/mp4">
-            </video>
+            <div class="augmentation-media">
+              <video autoplay muted loop playsinline preload="metadata">
+                <source src="./assets/videos/task-demos/task-800-third-person.mp4" type="video/mp4">
+              </video>
+            </div>
             <div>
-              <strong>Source trajectory</strong>
-              <span>Third-person RGB</span>
+              <strong>Put the Scissors on the Gift Box</strong>
+              <span>Put the Scissors on the Gift Box</span>
             </div>
           </article>
           <div class="augmentation-strip">
             <article class="augmentation-preview tone-wrist">
-              <video autoplay muted loop playsinline preload="metadata">
-                <source src="./assets/videos/task-demos/task-800-wrist.mp4" type="video/mp4">
-              </video>
+              <div class="augmentation-media">
+                <video autoplay muted loop playsinline preload="metadata">
+                  <source src="./assets/videos/task-demos/task-800-wrist.mp4" type="video/mp4">
+                </video>
+              </div>
               <div>
                 <strong>Wrist alignment</strong>
-                <span>paired camera stream</span>
+                <span>Paired camera stream</span>
               </div>
             </article>
             <article class="augmentation-preview tone-light">
-              <video autoplay muted loop playsinline preload="metadata">
-                <source src="./assets/videos/task-demos/task-806-third-person.mp4" type="video/mp4">
-              </video>
+              <div class="augmentation-media">
+                <video autoplay muted loop playsinline preload="metadata">
+                  <source src="./assets/videos/task-demos/task-806-third-person.mp4" type="video/mp4">
+                </video>
+              </div>
               <div>
                 <strong>Light variation</strong>
-                <span>exposure and color shift</span>
+                <span>Exposure and color shift</span>
               </div>
             </article>
             <article class="augmentation-preview tone-scene">
-              <video autoplay muted loop playsinline preload="metadata">
-                <source src="./assets/videos/task-demos/task-1002-third-person.mp4" type="video/mp4">
-              </video>
+              <div class="augmentation-media">
+                <video autoplay muted loop playsinline preload="metadata">
+                  <source src="./assets/videos/task-demos/task-1002-third-person.mp4" type="video/mp4">
+                </video>
+              </div>
               <div>
                 <strong>Scene coverage</strong>
-                <span>task-level context mix</span>
+                <span>Task-level context mix</span>
               </div>
             </article>
           </div>
@@ -178,10 +200,10 @@
     </section>
 
     <section class="browser-shell" id="explorer">
+      <div class="browser-shell-bg" aria-hidden="true"></div>
       <div class="container">
         <div class="explorer-header">
-          <div>
-            <p class="kicker">Explorer</p>
+          <div class="explorer-intro">
             <h2>Demo-level dataset access</h2>
             <p>Filter representative rendered clips, scan counted trajectory coverage, then preview the selected episode and core metadata.</p>
           </div>
@@ -203,27 +225,34 @@
 
         <div class="browser-filters" aria-label="Dataset filters">
           <label class="filter-field search-field">
-            <span>Search</span>
+            <span class="filter-label">Search</span>
             <input id="task-search" type="search" placeholder="Search demos, tasks, scenes, or objects">
           </label>
           <label class="filter-field">
-            <span>Category</span>
-            <select id="category-filter">
-              <option value="all">All categories</option>
-            </select>
+            <span class="filter-label">Category</span>
+            <div class="select-wrap">
+              <select id="category-filter">
+                <option value="all">All categories</option>
+              </select>
+            </div>
           </label>
           <label class="filter-field">
-            <span>Difficulty</span>
-            <select id="difficulty-filter">
-              <option value="all">All difficulty</option>
-              <option value="1">1 star</option>
-              <option value="2">2 stars</option>
-              <option value="3">3 stars</option>
-              <option value="4">4 stars</option>
-              <option value="5">5 stars</option>
-            </select>
+            <span class="filter-label">Difficulty</span>
+            <div class="select-wrap">
+              <select id="difficulty-filter">
+                <option value="all">All difficulty</option>
+                <option value="1">1 star</option>
+                <option value="2">2 stars</option>
+                <option value="3">3 stars</option>
+                <option value="4">4 stars</option>
+                <option value="5">5 stars</option>
+              </select>
+            </div>
           </label>
-          <button class="btn btn-primary" id="apply-filters" type="button">Apply</button>
+          <div class="filter-action">
+            <span class="filter-label" aria-hidden="true">Apply</span>
+            <button class="btn btn-primary" id="apply-filters" type="button">Apply</button>
+          </div>
         </div>
 
         <div class="browser-layout">
@@ -279,7 +308,7 @@
               <p id="detail-description">Demo description will load here.</p>
             </div>
             <div class="detail-block">
-              <span>Objects</span>
+              <span>Object</span>
               <div class="object-chips" id="detail-tags"></div>
             </div>
           </aside>
@@ -289,12 +318,28 @@
   </main>
 
   <footer class="footer">
-    <div class="container footer-inner">
-      <p>AXIS Data Browser</p>
+    <div class="footer-orbit" aria-hidden="true">
+      <img src="./assets/images/brand/footer-bg-mark.svg" alt="">
+    </div>
+    <div class="footer-inner">
+      <img class="footer-mark" src="./assets/images/brand/footer-mark.svg" alt="" width="120" height="122">
+      <p class="footer-title">AXIS ROBOTICS</p>
       <div class="footer-links">
         <a href="#showcase">Demos</a>
         <a href="#augmentation">Augmentation</a>
         <a href="#explorer">Explorer</a>
+      </div>
+      <div class="footer-tagline">
+        <p>Transferring diverse human intelligence into robotic general intelligence.</p>
+        <p class="footer-copy">©2026 AXIS Protocol Inc.</p>
+      </div>
+      <div class="footer-social" aria-label="Social links">
+        <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <span class="social-icon"><img src="./assets/images/brand/icon-x.svg" alt="" width="14" height="14"></span>
+        </a>
+        <a href="https://discord.com" target="_blank" rel="noopener noreferrer" aria-label="Discord">
+          <span class="social-icon"><img src="./assets/images/brand/icon-discord.svg" alt="" width="14" height="14"></span>
+        </a>
       </div>
     </div>
   </footer>

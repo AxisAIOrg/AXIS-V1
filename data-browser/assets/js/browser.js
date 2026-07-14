@@ -174,7 +174,7 @@ function renderChips(container, items) {
   container.innerHTML = "";
   items.forEach((item) => {
     const chip = document.createElement("span");
-    chip.textContent = item;
+    chip.textContent = String(item).replace(/^#/, "");
     container.appendChild(chip);
   });
 }
