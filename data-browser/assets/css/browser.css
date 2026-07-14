@@ -52,8 +52,9 @@
   --teal: #00ff59;
   --accent: #00ff59;
   --radius: 12px;
+  --frame: 1440px;
   --gutter: 20px;
-  --container: 100%;
+  --container: var(--frame);
   --font: "Switzer", "Borna", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --tracking: -0.02em;
   color: var(--ink);
@@ -62,13 +63,13 @@
   letter-spacing: var(--tracking);
 }
 
-/* Full-bleed content width; fixed side gutters only (no 1440 max-width). */
+/* Main content: fixed 1440 canvas, centered. Section backgrounds stay full-bleed. */
 .page-browser .container {
   box-sizing: border-box;
-  width: 100%;
-  max-width: none;
-  margin-left: 0;
-  margin-right: 0;
+  width: min(var(--frame), 100%);
+  max-width: var(--frame);
+  margin-left: auto;
+  margin-right: auto;
   padding-left: var(--gutter);
   padding-right: var(--gutter);
 }
@@ -1180,11 +1181,27 @@
   height: auto;
 }
 
-.page-browser .footer-title {
+.page-browser .footer-right {
   position: absolute;
   right: var(--gutter);
-  left: auto;
   top: 7px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.page-browser .footer-right-top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.page-browser .footer-title {
+  position: static;
   margin: 0;
   color: #fff;
   font-family: Borna, Switzer, sans-serif;
@@ -1193,19 +1210,16 @@
   line-height: 1.1;
   letter-spacing: -0.02em;
   white-space: nowrap;
-  text-align: right;
+  text-align: left;
   transform: none;
 }
 
 .page-browser .footer-links {
-  position: absolute;
-  right: var(--gutter);
-  left: auto;
-  top: 135px;
+  position: static;
   display: flex;
   gap: 24px;
   width: var(--footer-links-w);
-  max-width: calc(100% - (var(--gutter) * 2));
+  max-width: 100%;
   margin: 0;
 }
 
@@ -1255,11 +1269,7 @@
 }
 
 .page-browser .footer-social {
-  position: absolute;
-  /* Align under links column start (links are right-anchored). */
-  right: calc(var(--gutter) + var(--footer-links-w) - 72px);
-  left: auto;
-  top: 576px;
+  position: static;
   display: flex;
   gap: 8px;
   width: 72px;
@@ -1299,20 +1309,23 @@
   }
 
   .page-browser .footer-mark,
-  .page-browser .footer-title,
-  .page-browser .footer-links,
-  .page-browser .footer-tagline,
-  .page-browser .footer-social {
+  .page-browser .footer-right,
+  .page-browser .footer-tagline {
     position: static;
     left: auto;
     right: auto;
     top: auto;
+    bottom: auto;
+  }
+
+  .page-browser .footer-right {
+    width: 100%;
+    gap: 28px;
   }
 
   .page-browser .footer-title {
     font-size: clamp(40px, 8vw, 64px);
     white-space: normal;
-    text-align: left;
   }
 
   .page-browser .footer-links {
@@ -1321,7 +1334,7 @@
 
   .page-browser .footer-tagline {
     width: min(452px, 100%);
-    margin-top: 24px;
+    margin-top: 8px;
   }
 }
 
