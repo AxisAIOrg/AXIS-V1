@@ -1,5 +1,71 @@
 /* AXIS Data Browser — Figma Landing-page redesign (node 3764:2339) */
 
+/* Borna: force one family name + weight map (OTF internal names differ for Medium/SemiBold). */
+@font-face {
+  font-family: "Borna";
+  src: url("../fonts/borna/Borna-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Borna";
+  src: url("../fonts/borna/Borna-RegularItalic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Borna";
+  src: url("../fonts/borna/Borna-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Borna";
+  src: url("../fonts/borna/Borna-MediumItalic.otf") format("opentype");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Borna";
+  src: url("../fonts/borna/Borna-SemiBold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Borna";
+  src: url("../fonts/borna/Borna-SemiBoldItalic.otf") format("opentype");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Borna";
+  src: url("../fonts/borna/Borna-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Borna";
+  src: url("../fonts/borna/Borna-BoldItalic.otf") format("opentype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Switzer kept as fallback only. */
 @font-face {
   font-family: "Switzer";
   src: url("../fonts/switzer-400.woff2") format("woff2");
@@ -32,14 +98,6 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: "Borna";
-  src: url("../fonts/borna-medium.woff") format("woff");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
 .page-browser {
   --paper: #000;
   --paper-2: #0a0a0a;
@@ -55,7 +113,7 @@
   --frame: 1440px;
   --gutter: 20px;
   --container: var(--frame);
-  --font: "Switzer", "Borna", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font: "Borna", "Switzer", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --tracking: -0.02em;
   color: var(--ink);
   background: #000;
@@ -96,7 +154,8 @@
 
 .page-browser .header-inner {
   min-height: auto;
-  padding: 20px 0;
+  padding-top: 20px;
+  padding-bottom: 20px;
 }
 
 .page-browser .brand {
@@ -260,9 +319,9 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 598px) minmax(0, 479px);
-  justify-content: space-between;
-  gap: 40px;
+  grid-template-columns: minmax(0, 598px) minmax(0, 1fr);
+  justify-content: start;
+  column-gap: 80px;
   align-items: start;
   width: 100%;
 }
@@ -301,7 +360,9 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
+  max-width: 320px;
   padding-top: 8px;
+  justify-self: start;
 }
 
 .browser-hero-panel div {
@@ -597,16 +658,48 @@
   position: relative;
   padding: 80px 0 96px;
   overflow: hidden;
-  background: #050505;
+  background: #000;
 }
 
 .browser-shell-bg {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(5, 5, 5, 0.78) 0%, rgba(5, 5, 5, 0.94) 100%),
-    radial-gradient(ellipse 55% 45% at 70% 35%, rgba(70, 70, 70, 0.28), transparent 70%),
-    radial-gradient(ellipse 40% 35% at 25% 60%, rgba(45, 45, 45, 0.22), transparent 65%);
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #000;
+}
+
+/* Full-bleed video band: height follows page width at 16:9 (source ratio). */
+.browser-shell-bg-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 520px;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  overflow: hidden;
+  background: transparent;
+}
+
+.browser-shell-video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Mask rides with the video frame only — fades into the same #000 as the page. */
+.browser-shell-bg-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, #000 80.25%);
   pointer-events: none;
 }
 
@@ -1148,17 +1241,15 @@
 
 .footer-orbit {
   position: absolute;
-  inset: -20% -10% -40% -40%;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
   pointer-events: none;
-}
-
-.footer-orbit img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.4;
-  transform: rotate(127deg) scale(1.35);
-  transform-origin: 30% 60%;
+  background-color: #000;
+  background-image: url("../images/brand/Footer-bg.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
 }
 
 .page-browser .footer-inner {
@@ -1170,7 +1261,7 @@
   max-width: var(--frame);
   height: 100%;
   margin: 0 auto;
-  padding: 0;
+  padding: 0 var(--gutter);
 }
 
 .page-browser .footer-mark {
@@ -1204,7 +1295,7 @@
   position: static;
   margin: 0;
   color: #fff;
-  font-family: Borna, Switzer, sans-serif;
+  font-family: var(--font);
   font-size: 80px;
   font-weight: 600;
   line-height: 1.1;
@@ -1227,7 +1318,7 @@
   flex: 1 0 0;
   min-width: 0;
   color: #fff;
-  font-family: Borna, Switzer, sans-serif;
+  font-family: var(--font);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
@@ -1253,7 +1344,7 @@
 .page-browser .footer-tagline p {
   margin: 0;
   color: #fff;
-  font-family: Borna, Switzer, sans-serif;
+  font-family: var(--font);
   font-size: 24px;
   font-weight: 600;
   line-height: 1.1;
