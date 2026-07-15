@@ -1432,7 +1432,13 @@
 }
 
 @media (max-width: 1180px) {
-  .browser-hero-grid,
+  /* Keep title + stats side-by-side on iPad widths (e.g. 1024). */
+  .browser-hero-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+    column-gap: 32px;
+    align-items: start;
+  }
+
   .browser-section-head,
   .augmentation-layout,
   .browser-layout {
@@ -1444,14 +1450,25 @@
     padding: 120px 0 72px;
   }
 
+  .browser-hero-copy {
+    max-width: none;
+  }
+
+  .browser-hero h1 {
+    font-size: clamp(40px, 5.5vw, 64px);
+  }
+
   .browser-hero-panel {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: none;
+    width: 100%;
+    padding-top: 0;
   }
 
   .browser-hero-panel strong {
-    font-size: 36px;
+    font-size: clamp(28px, 3.6vw, 44px);
   }
 
   .augmentation-visual-stage {
@@ -1461,6 +1478,25 @@
 
   .task-detail {
     position: static;
+  }
+}
+
+@media (max-width: 900px) {
+  .browser-hero-grid {
+    grid-template-columns: 1fr;
+    row-gap: 40px;
+  }
+
+  .browser-hero-panel {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 20px;
+    max-width: none;
+    width: 100%;
+  }
+
+  .browser-hero-panel strong {
+    font-size: clamp(22px, 4.2vw, 32px);
   }
 }
 
@@ -1476,6 +1512,12 @@
   .augmentation-visual-stage,
   .browser-filters {
     grid-template-columns: 1fr;
+  }
+
+  .browser-hero-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
 
   .augmentation-strip {
