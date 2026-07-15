@@ -56,6 +56,62 @@ function formatDuration(totalSeconds) {
   return `${Math.max(1, seconds)}s`;
 }
 
+function easeOutQuart(t) {
+  return 1 - (1 - t) ** 4;
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+}
+
+/** Count from 0 to target; `format` maps the numeric value to display text. */
+function animateCount(el, target, { duration = 2400, delay = 0, format = formatNumber } = {}) {
+  if (!el) return;
+  const end = Number(target) || 0;
+  el.textContent = format(0);
+  if (prefersReducedMotion() || end <= 0) {
+    el.textContent = format(end);
+    return;
+  }
+
+  const run = () => {
+    const start = performance.now();
+    el.textContent = format(0);
+
+    function frame(now) {
+      const progress = Math.min(1, (now - start) / duration);
+      const value = end * easeOutQuart(progress);
+      el.textContent = format(value);
+      if (progress < 1) requestAnimationFrame(frame);
+      else el.textContent = format(end);
+    }
+
+    requestAnimationFrame(frame);
+  };
+
+  if (delay > 0) setTimeout(run, delay);
+  else run();
+}
+
+function startHeroStatCountUps(episodes, durationSeconds, tasks) {
+  const items = [
+    [browserEls.totalEpisodes, episodes, (value) => formatNumber(Math.round(value))],
+    [browserEls.totalDuration, durationSeconds, (value) => formatDuration(Math.round(value))],
+    [browserEls.totalTasks, tasks, (value) => formatNumber(Math.round(value))]
+  ];
+
+  // Start all three together as soon as the next frame paints.
+  requestAnimationFrame(() => {
+    items.forEach(([el, target, format]) => {
+      animateCount(el, target, {
+        duration: 2200,
+        delay: 0,
+        format
+      });
+    });
+  });
+}
+
 function formatFrameValue(demo) {
   return `${demo.estimatedFrames ? "~" : ""}${formatNumber(demo.frames)}`;
 }
@@ -351,9 +407,7 @@ function initializeBrowser() {
     sourceSummary.cleanExportedTasks ||
     tasks.length;
   const totalDuration = sourceSummary.combinedStats?.durationSeconds || sourceSummary.localDemoStats?.durationSeconds || 0;
-  if (browserEls.totalTasks) browserEls.totalTasks.textContent = formatNumber(totalTasks);
-  if (browserEls.totalEpisodes) browserEls.totalEpisodes.textContent = formatNumber(totalEpisodes);
-  if (browserEls.totalDuration) browserEls.totalDuration.textContent = formatDuration(totalDuration);
+  startHeroStatCountUps(totalEpisodes, totalDuration, totalTasks);
   populateCategoryFilter();
   setupFilters();
   setupPagination();
