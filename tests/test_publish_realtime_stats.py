@@ -30,8 +30,15 @@ def valid_snapshot():
         },
         "growth_per_hour": {
             "trajectories": 5.0,
-            "tasks": 1.0,
+            "tasks": None,
             "trajectory_duration_seconds": 60.0,
+        },
+        "tasks_daily": {
+            "utc_date": "2026-07-23",
+            "baseline_utc_date": "2026-07-22",
+            "baseline_total": 9,
+            "increase": 1,
+            "basis": "verified",
         },
     }
 
@@ -60,6 +67,13 @@ class PublishRealtimeStatsTests(unittest.TestCase):
         }
         payload["growth_per_hour"] = {
             key: None for key in payload["growth_per_hour"]
+        }
+        payload["tasks_daily"] = {
+            "utc_date": "2026-07-23",
+            "baseline_utc_date": None,
+            "baseline_total": None,
+            "increase": 1,
+            "basis": "estimated",
         }
         with tempfile.TemporaryDirectory() as directory:
             _, sample_id = validate_public_snapshot(
@@ -97,6 +111,20 @@ class PublishRealtimeStatsTests(unittest.TestCase):
             with self.assertRaises(PublishError):
                 validate_public_snapshot(self.write_payload(directory, payload))
 
+    def test_rejects_hourly_task_growth(self):
+        payload = valid_snapshot()
+        payload["growth_per_hour"]["tasks"] = 1.0
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(PublishError):
+                validate_public_snapshot(self.write_payload(directory, payload))
+
+    def test_rejects_daily_task_increase_that_does_not_match_baseline(self):
+        payload = valid_snapshot()
+        payload["tasks_daily"]["increase"] = 2
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(PublishError):
+                validate_public_snapshot(self.write_payload(directory, payload))
+
     def test_rejects_total_lower_than_previous_snapshot(self):
         previous = valid_snapshot()
         current = valid_snapshot()
@@ -122,10 +150,105 @@ class PublishRealtimeStatsTests(unittest.TestCase):
             "tasks": 9,
             "trajectory_duration_seconds": 3540.0,
         }
+        previous["tasks_daily"] = {
+            "utc_date": "2026-07-23",
+            "baseline_utc_date": "2026-07-22",
+            "baseline_total": 9,
+            "increase": 0,
+            "basis": "verified",
+        }
         with tempfile.TemporaryDirectory() as directory:
             previous_path = self.write_payload(directory, previous)
             current_path = Path(directory) / "current.json"
             current_path.write_text(json.dumps(valid_snapshot()), encoding="utf-8")
+            raw_current, _ = validate_public_snapshot(current_path)
+            validate_monotonic_against_previous(raw_current, previous_path)
+
+    def test_accepts_next_day_task_growth_from_previous_total(self):
+        previous = valid_snapshot()
+        previous["sample_id"] = "aaaaaaaaaaaaaaaa"
+        previous["sampled_at"] = "2026-07-23T23:00:00Z"
+        previous["previous_sampled_at"] = "2026-07-23T22:00:00Z"
+
+        current = valid_snapshot()
+        current["sample_id"] = "bbbbbbbbbbbbbbbb"
+        current["sampled_at"] = "2026-07-24T00:00:00Z"
+        current["previous_sampled_at"] = previous["sampled_at"]
+        current["totals"] = {
+            "trajectories": 105,
+            "tasks": 12,
+            "trajectory_duration_seconds": 3660.0,
+        }
+        current["delta_since_previous"] = {
+            "trajectories": 5,
+            "tasks": 2,
+            "trajectory_duration_seconds": 60.0,
+        }
+        current["tasks_daily"] = {
+            "utc_date": "2026-07-24",
+            "baseline_utc_date": "2026-07-23",
+            "baseline_total": 10,
+            "increase": 2,
+            "basis": "verified",
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            previous_path = self.write_payload(directory, previous)
+            current_path = Path(directory) / "current.json"
+            current_path.write_text(json.dumps(current), encoding="utf-8")
+            raw_current, _ = validate_public_snapshot(current_path)
+            validate_monotonic_against_previous(raw_current, previous_path)
+
+    def test_stale_adjacent_date_baseline_must_hide_daily_growth(self):
+        previous = valid_snapshot()
+        previous["sample_id"] = "aaaaaaaaaaaaaaaa"
+        previous["sampled_at"] = "2026-07-23T00:17:00Z"
+        previous["previous_sampled_at"] = "2026-07-22T23:17:00Z"
+
+        current = valid_snapshot()
+        current["sample_id"] = "bbbbbbbbbbbbbbbb"
+        current["sampled_at"] = "2026-07-24T23:17:00Z"
+        current["previous_sampled_at"] = previous["sampled_at"]
+        current["sample_interval_seconds"] = 47 * 3600
+        current["totals"] = {
+            "trajectories": 105,
+            "tasks": 12,
+            "trajectory_duration_seconds": 3660.0,
+        }
+        current["delta_since_previous"] = {
+            "trajectories": 5,
+            "tasks": 2,
+            "trajectory_duration_seconds": 60.0,
+        }
+        current["growth_per_hour"] = {
+            "trajectories": 0.106,
+            "tasks": None,
+            "trajectory_duration_seconds": 1.277,
+        }
+        current["tasks_daily"] = {
+            "utc_date": "2026-07-24",
+            "baseline_utc_date": "2026-07-23",
+            "baseline_total": 10,
+            "increase": 2,
+            "basis": "verified",
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            previous_path = self.write_payload(directory, previous)
+            current_path = Path(directory) / "current.json"
+            current_path.write_text(json.dumps(current), encoding="utf-8")
+            raw_current, _ = validate_public_snapshot(current_path)
+            with self.assertRaises(PublishError):
+                validate_monotonic_against_previous(raw_current, previous_path)
+
+            current["tasks_daily"] = {
+                "utc_date": "2026-07-24",
+                "baseline_utc_date": None,
+                "baseline_total": None,
+                "increase": None,
+                "basis": "unavailable",
+            }
+            current_path.write_text(json.dumps(current), encoding="utf-8")
             raw_current, _ = validate_public_snapshot(current_path)
             validate_monotonic_against_previous(raw_current, previous_path)
 

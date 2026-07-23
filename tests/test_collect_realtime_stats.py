@@ -11,11 +11,22 @@ from scripts.collect_realtime_stats import (
     STATS_QUERY,
     StatsCollectionError,
     build_snapshot,
+    build_tasks_daily,
     load_previous_snapshot,
     normalize_database_url,
     query_database_totals,
     write_snapshot,
 )
+
+
+def estimated_tasks_daily(utc_date, increase=9):
+    return {
+        "utc_date": utc_date,
+        "baseline_utc_date": None,
+        "baseline_total": None,
+        "increase": increase,
+        "basis": "estimated",
+    }
 
 
 class CollectRealtimeStatsTests(unittest.TestCase):
@@ -133,12 +144,17 @@ class CollectRealtimeStatsTests(unittest.TestCase):
             },
             sampled_at,
             None,
+            initial_task_daily_estimate=9,
         )
 
         self.assertEqual(snapshot["status"], "ok")
         self.assertEqual(snapshot["sampled_at"], "2026-07-23T12:00:00Z")
         self.assertIsNone(snapshot["previous_sampled_at"])
         self.assertTrue(all(value is None for value in snapshot["growth_per_hour"].values()))
+        self.assertEqual(
+            snapshot["tasks_daily"],
+            estimated_tasks_daily("2026-07-23"),
+        )
 
     def test_growth_rate_uses_actual_sample_interval(self):
         previous_time = datetime(2026, 7, 23, 10, 0, tzinfo=timezone.utc)
@@ -150,6 +166,7 @@ class CollectRealtimeStatsTests(unittest.TestCase):
                 "tasks": 100,
                 "trajectory_duration_seconds": 50_000,
             },
+            "tasks_daily": estimated_tasks_daily("2026-07-23", 4),
         }
 
         snapshot = build_snapshot(
@@ -165,11 +182,142 @@ class CollectRealtimeStatsTests(unittest.TestCase):
         self.assertEqual(snapshot["sample_interval_seconds"], 7200)
         self.assertEqual(snapshot["delta_since_previous"]["trajectories"], 300)
         self.assertEqual(snapshot["growth_per_hour"]["trajectories"], 150)
-        self.assertEqual(snapshot["growth_per_hour"]["tasks"], 2)
+        self.assertIsNone(snapshot["growth_per_hour"]["tasks"])
+        self.assertEqual(
+            snapshot["tasks_daily"],
+            estimated_tasks_daily("2026-07-23", 4),
+        )
         self.assertEqual(
             snapshot["growth_per_hour"]["trajectory_duration_seconds"],
             3600,
         )
+
+    def test_estimated_task_growth_stays_fixed_for_bootstrap_day(self):
+        previous_time = datetime(2026, 7, 23, 10, 0, tzinfo=timezone.utc)
+        daily = build_tasks_daily(
+            105,
+            previous_time + timedelta(hours=2),
+            {
+                "sampled_at": previous_time,
+                "totals": {
+                    "trajectories": 1_000,
+                    "tasks": 100,
+                    "trajectory_duration_seconds": 50_000,
+                },
+                "tasks_daily": estimated_tasks_daily("2026-07-23"),
+            },
+        )
+
+        self.assertEqual(daily, estimated_tasks_daily("2026-07-23"))
+
+    def test_first_snapshot_without_explicit_estimate_hides_daily_growth(self):
+        daily = build_tasks_daily(
+            100,
+            datetime(2026, 7, 23, 12, 0, tzinfo=timezone.utc),
+            None,
+        )
+
+        self.assertEqual(daily["basis"], "unavailable")
+        self.assertIsNone(daily["increase"])
+
+    def test_next_utc_day_uses_previous_task_total_as_verified_baseline(self):
+        previous_time = datetime(2026, 7, 23, 23, 17, tzinfo=timezone.utc)
+        daily = build_tasks_daily(
+            104,
+            previous_time + timedelta(hours=1),
+            {
+                "sampled_at": previous_time,
+                "totals": {
+                    "trajectories": 1_000,
+                    "tasks": 100,
+                    "trajectory_duration_seconds": 50_000,
+                },
+                "tasks_daily": estimated_tasks_daily("2026-07-23"),
+            },
+        )
+
+        self.assertEqual(
+            daily,
+            {
+                "utc_date": "2026-07-24",
+                "baseline_utc_date": "2026-07-23",
+                "baseline_total": 100,
+                "increase": 4,
+                "basis": "verified",
+            },
+        )
+
+    def test_verified_task_growth_accumulates_without_moving_daily_baseline(self):
+        previous_time = datetime(2026, 7, 24, 0, 17, tzinfo=timezone.utc)
+        daily = build_tasks_daily(
+            103,
+            previous_time + timedelta(hours=4),
+            {
+                "sampled_at": previous_time,
+                "totals": {
+                    "trajectories": 1_000,
+                    "tasks": 100,
+                    "trajectory_duration_seconds": 50_000,
+                },
+                "tasks_daily": {
+                    "utc_date": "2026-07-24",
+                    "baseline_utc_date": "2026-07-23",
+                    "baseline_total": 95,
+                    "increase": 5,
+                    "basis": "verified",
+                },
+            },
+        )
+
+        self.assertEqual(daily["baseline_total"], 95)
+        self.assertEqual(daily["increase"], 8)
+        self.assertEqual(daily["basis"], "verified")
+
+    def test_multi_day_gap_hides_daily_task_growth(self):
+        previous_time = datetime(2026, 7, 21, 23, 17, tzinfo=timezone.utc)
+        daily = build_tasks_daily(
+            105,
+            datetime(2026, 7, 23, 0, 17, tzinfo=timezone.utc),
+            {
+                "sampled_at": previous_time,
+                "totals": {
+                    "trajectories": 1_000,
+                    "tasks": 100,
+                    "trajectory_duration_seconds": 50_000,
+                },
+                "tasks_daily": estimated_tasks_daily("2026-07-21"),
+            },
+        )
+
+        self.assertEqual(
+            daily,
+            {
+                "utc_date": "2026-07-23",
+                "baseline_utc_date": None,
+                "baseline_total": None,
+                "increase": None,
+                "basis": "unavailable",
+            },
+        )
+
+    def test_long_adjacent_date_gap_is_not_labeled_as_one_day(self):
+        previous_time = datetime(2026, 7, 23, 0, 17, tzinfo=timezone.utc)
+        daily = build_tasks_daily(
+            120,
+            datetime(2026, 7, 24, 23, 17, tzinfo=timezone.utc),
+            {
+                "sampled_at": previous_time,
+                "totals": {
+                    "trajectories": 1_000,
+                    "tasks": 100,
+                    "trajectory_duration_seconds": 50_000,
+                },
+                "tasks_daily": estimated_tasks_daily("2026-07-23"),
+            },
+        )
+
+        self.assertEqual(daily["basis"], "unavailable")
+        self.assertIsNone(daily["increase"])
 
     def test_database_correction_never_decreases_public_totals(self):
         previous_time = datetime(2026, 7, 23, 11, 0, tzinfo=timezone.utc)
@@ -187,6 +335,7 @@ class CollectRealtimeStatsTests(unittest.TestCase):
                     "tasks": 100,
                     "trajectory_duration_seconds": 50_000,
                 },
+                "tasks_daily": estimated_tasks_daily("2026-07-23"),
             },
         )
 
@@ -197,8 +346,13 @@ class CollectRealtimeStatsTests(unittest.TestCase):
             all(value == 0 for value in snapshot["delta_since_previous"].values())
         )
         self.assertTrue(
-            all(value == 0 for value in snapshot["growth_per_hour"].values())
+            all(
+                value == 0
+                for key, value in snapshot["growth_per_hour"].items()
+                if key != "tasks"
+            )
         )
+        self.assertIsNone(snapshot["growth_per_hour"]["tasks"])
 
     def test_bootstrap_file_loads_as_no_previous_snapshot(self):
         with tempfile.TemporaryDirectory() as directory:

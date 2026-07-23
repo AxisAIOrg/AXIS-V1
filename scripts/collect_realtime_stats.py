@@ -10,7 +10,7 @@ import math
 import os
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit, urlunsplit
@@ -20,6 +20,15 @@ SCHEMA_VERSION = 1
 DATABASE_ENV_NAME = "AXIS_STATS_DATABASE_URL"
 SSL_ROOT_CERT_ENV_NAME = "AXIS_STATS_SSL_ROOT_CERT"
 METRIC_KEYS = ("trajectories", "tasks", "trajectory_duration_seconds")
+TASKS_DAILY_KEYS = {
+    "utc_date",
+    "baseline_utc_date",
+    "baseline_total",
+    "increase",
+    "basis",
+}
+TASKS_DAILY_BASES = {"estimated", "verified", "unavailable"}
+MAX_TASK_DAILY_BASELINE_AGE = timedelta(hours=6)
 QUERY_RETRY_DELAYS_SECONDS = (2, 5)
 RETRYABLE_SQLSTATES = {
     "40001",  # serialization failure / read-replica recovery conflict
@@ -124,6 +133,114 @@ def validate_totals(payload: Any) -> dict[str, int | float]:
     return {key: validate_total(key, payload.get(key)) for key in METRIC_KEYS}
 
 
+def parse_utc_date(value: Any) -> date:
+    if not isinstance(value, str):
+        raise StatsCollectionError("The daily task date is invalid.")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as exc:
+        raise StatsCollectionError("The daily task date is invalid.") from exc
+    if parsed.isoformat() != value:
+        raise StatsCollectionError("The daily task date is invalid.")
+    return parsed
+
+
+def validate_nonnegative_integer(name: str, value: Any) -> int:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or not float(value).is_integer()
+        or value < 0
+        or value > 2**53 - 1
+    ):
+        raise StatsCollectionError(f"The {name} is invalid.")
+    return int(value)
+
+
+def validate_tasks_daily(
+    payload: Any,
+    total_tasks: int,
+    expected_utc_date: date | None = None,
+) -> dict[str, Any]:
+    if not isinstance(payload, dict) or set(payload) != TASKS_DAILY_KEYS:
+        raise StatsCollectionError("The daily task statistics are invalid.")
+
+    utc_date = parse_utc_date(payload.get("utc_date"))
+    if expected_utc_date is not None and utc_date != expected_utc_date:
+        raise StatsCollectionError(
+            "The daily task date does not match the snapshot date."
+        )
+    basis = payload.get("basis")
+    if basis not in TASKS_DAILY_BASES:
+        raise StatsCollectionError("The daily task basis is invalid.")
+
+    baseline_date_value = payload.get("baseline_utc_date")
+    baseline_total_value = payload.get("baseline_total")
+    increase_value = payload.get("increase")
+
+    if basis == "estimated":
+        if baseline_date_value is not None or baseline_total_value is not None:
+            raise StatsCollectionError(
+                "Estimated daily task statistics cannot contain a baseline."
+            )
+        increase = validate_nonnegative_integer(
+            "estimated daily task increase",
+            increase_value,
+        )
+        if increase > total_tasks:
+            raise StatsCollectionError(
+                "The estimated daily task increase exceeds the task total."
+            )
+        baseline_utc_date = None
+        baseline_total = None
+    elif basis == "verified":
+        baseline_utc_date = parse_utc_date(baseline_date_value)
+        if utc_date - baseline_utc_date != timedelta(days=1):
+            raise StatsCollectionError(
+                "The verified daily task baseline must be the previous UTC date."
+            )
+        baseline_total = validate_nonnegative_integer(
+            "daily task baseline",
+            baseline_total_value,
+        )
+        increase = validate_nonnegative_integer(
+            "daily task increase",
+            increase_value,
+        )
+        if baseline_total > total_tasks or increase != total_tasks - baseline_total:
+            raise StatsCollectionError(
+                "The verified daily task increase does not match its baseline."
+            )
+    else:
+        if any(
+            value is not None
+            for value in (
+                baseline_date_value,
+                baseline_total_value,
+                increase_value,
+            )
+        ):
+            raise StatsCollectionError(
+                "Unavailable daily task statistics cannot contain values."
+            )
+        baseline_utc_date = None
+        baseline_total = None
+        increase = None
+
+    return {
+        "utc_date": utc_date.isoformat(),
+        "baseline_utc_date": (
+            baseline_utc_date.isoformat()
+            if isinstance(baseline_utc_date, date)
+            else None
+        ),
+        "baseline_total": baseline_total,
+        "increase": increase,
+        "basis": basis,
+    }
+
+
 def load_previous_snapshot(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -143,10 +260,118 @@ def load_previous_snapshot(path: Path) -> dict[str, Any] | None:
     if payload.get("status") != "ok":
         raise StatsCollectionError("The previous statistics snapshot has an invalid status.")
 
+    sampled_at = parse_utc_timestamp(payload.get("sampled_at"))
+    totals = validate_totals(payload.get("totals"))
     return {
-        "sampled_at": parse_utc_timestamp(payload.get("sampled_at")),
-        "totals": validate_totals(payload.get("totals")),
+        "sampled_at": sampled_at,
+        "totals": totals,
+        "tasks_daily": validate_tasks_daily(
+            payload.get("tasks_daily"),
+            int(totals["tasks"]),
+            sampled_at.date(),
+        ),
     }
+
+
+def build_tasks_daily(
+    total_tasks: int,
+    sampled_at: datetime,
+    previous: dict[str, Any] | None,
+    initial_estimate: int | None = None,
+) -> dict[str, Any]:
+    if sampled_at.tzinfo is None:
+        raise StatsCollectionError(
+            "The database snapshot timestamp must include a timezone."
+        )
+    sampled_at_utc = sampled_at.astimezone(timezone.utc)
+    utc_date = sampled_at_utc.date()
+
+    if previous is None:
+        if initial_estimate is None:
+            return validate_tasks_daily(
+                {
+                    "utc_date": utc_date.isoformat(),
+                    "baseline_utc_date": None,
+                    "baseline_total": None,
+                    "increase": None,
+                    "basis": "unavailable",
+                },
+                total_tasks,
+                utc_date,
+            )
+        estimate = validate_nonnegative_integer(
+            "initial daily task estimate",
+            initial_estimate,
+        )
+        return validate_tasks_daily(
+            {
+                "utc_date": utc_date.isoformat(),
+                "baseline_utc_date": None,
+                "baseline_total": None,
+                "increase": min(estimate, total_tasks),
+                "basis": "estimated",
+            },
+            total_tasks,
+            utc_date,
+        )
+
+    previous_time = previous.get("sampled_at")
+    if not isinstance(previous_time, datetime) or previous_time.tzinfo is None:
+        raise StatsCollectionError("The previous snapshot timestamp is invalid.")
+    previous_time = previous_time.astimezone(timezone.utc)
+    previous_date = previous_time.date()
+    previous_totals = validate_totals(previous.get("totals"))
+    previous_daily = validate_tasks_daily(
+        previous.get("tasks_daily"),
+        int(previous_totals["tasks"]),
+        previous_date,
+    )
+    day_gap = utc_date - previous_date
+
+    if day_gap == timedelta(0):
+        if previous_daily["basis"] == "estimated":
+            return previous_daily
+        if previous_daily["basis"] == "unavailable":
+            return previous_daily
+        return validate_tasks_daily(
+            {
+                **previous_daily,
+                "increase": total_tasks - int(previous_daily["baseline_total"]),
+            },
+            total_tasks,
+            utc_date,
+        )
+
+    if (
+        day_gap == timedelta(days=1)
+        and sampled_at_utc - previous_time <= MAX_TASK_DAILY_BASELINE_AGE
+    ):
+        return validate_tasks_daily(
+            {
+                "utc_date": utc_date.isoformat(),
+                "baseline_utc_date": previous_date.isoformat(),
+                "baseline_total": int(previous_totals["tasks"]),
+                "increase": total_tasks - int(previous_totals["tasks"]),
+                "basis": "verified",
+            },
+            total_tasks,
+            utc_date,
+        )
+
+    if day_gap >= timedelta(days=1):
+        return validate_tasks_daily(
+            {
+                "utc_date": utc_date.isoformat(),
+                "baseline_utc_date": None,
+                "baseline_total": None,
+                "increase": None,
+                "basis": "unavailable",
+            },
+            total_tasks,
+            utc_date,
+        )
+
+    raise StatsCollectionError("The new database snapshot is older than the previous one.")
 
 
 def validate_ssl_root_cert(path: Path) -> Path:
@@ -218,6 +443,7 @@ def build_snapshot(
     totals: dict[str, int | float],
     sampled_at: datetime,
     previous: dict[str, Any] | None,
+    initial_task_daily_estimate: int | None = None,
 ) -> dict[str, Any]:
     clean_totals = validate_totals(totals)
     if sampled_at.tzinfo is None:
@@ -250,7 +476,18 @@ def build_snapshot(
                 delta[key] = int(difference)
             else:
                 delta[key] = round(float(difference), 3)
-            growth[key] = round(float(difference) * 3600 / interval_seconds, 3)
+            if key != "tasks":
+                growth[key] = round(
+                    float(difference) * 3600 / interval_seconds,
+                    3,
+                )
+
+    tasks_daily = build_tasks_daily(
+        int(clean_totals["tasks"]),
+        sampled_at_utc,
+        previous,
+        initial_task_daily_estimate,
+    )
 
     sample_hash_input = json.dumps(
         {"sampled_at": sampled_at_text, "totals": clean_totals},
@@ -271,6 +508,7 @@ def build_snapshot(
         "totals": clean_totals,
         "delta_since_previous": delta,
         "growth_per_hour": growth,
+        "tasks_daily": tasks_daily,
     }
 
 

@@ -37,7 +37,8 @@ The homepage reads `data/realtime-stats.json` and displays:
 - verified trajectory count;
 - distinct tasks represented by those trajectories;
 - summed trajectory duration from `simulation_time_seconds`;
-- the observed growth per hour for each metric.
+- observed hourly growth for trajectories and duration;
+- UTC daily growth for tasks.
 
 `.github/workflows/realtime-stats.yml` runs at minute 17 of every hour (and can
 also be run manually). It queries PostgreSQL in a read-only transaction, writes
@@ -53,21 +54,30 @@ Uploading the entire video-heavy site as a Pages artifact every hour would be
 unnecessarily expensive. A `GITHUB_TOKEN` commit does not trigger a Pages build
 on its own, so the explicit Pages build request in the workflow is required.
 
-Between snapshots, the browser distributes the latest measured increase across
-seeded pseudo-random event times for exactly one hour. Independent event times
-create visible bursts and quiet gaps while sorting keeps playback monotonic.
-The counters start at the previous totals, finish at the latest totals, and
-never extrapolate past them. The real-time statistics heading sits above the
-metric cards; trajectories span the first row, while tasks and trajectory
-duration share the second row.
+Between snapshots, the browser distributes the latest measured trajectory and
+duration increases across seeded pseudo-random event times for exactly one
+hour. Independent event times create visible bursts and quiet gaps while
+sorting keeps playback monotonic. Those counters start at the previous totals,
+finish at the latest totals, and never extrapolate past them. Tasks use the
+latest measured total directly because the task catalog updates daily. The
+real-time statistics heading sits above the metric cards; trajectories span
+the first row, while tasks and trajectory duration share the second row.
 
 Changed digits use upward rolling reels with a short low-to-high stagger,
 inspired by live mileage counters. Visitors who prefer reduced motion receive
-the same values without the reel animation. Numeric growth comes exclusively
-from the sanitized database delta; no artificial catch-up amount is added.
+the same values without the reel animation. Trajectory and duration growth
+comes exclusively from the sanitized database delta; no artificial catch-up
+amount is added. The one bootstrap-day task estimate is marked explicitly and
+is replaced by snapshot-based daily differences from the next UTC date onward.
 
 The current checked-in comparison starts from 1,530,275 trajectories, 1,816
-tasks, and 13,645 h 7 m. Hourly Actions refreshes replace this comparison with
+tasks, and 13,645 h 7 m. The initial task badge uses the latest complete UTC
+day's increase, `Est. +9 / day`. Starting with the next UTC date, the collector
+stores the previous date's last published task total and reports the current
+date's non-negative difference. If the prior snapshot is more than six hours
+old at the UTC date boundary, the daily badge is hidden instead of labeling a
+stale or multi-day increase as one day.
+Hourly Actions refreshes replace the trajectory and duration comparison with
 the next pair of database snapshots. Public totals are monotonic: metric arrows
 show upward growth or a steady value, and database corrections never decrease a
 published total.

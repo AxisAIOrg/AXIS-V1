@@ -62,6 +62,91 @@
     return timestamp;
   }
 
+  function parseUtcDate(value, fieldName) {
+    if (
+      typeof value !== "string"
+      || !/^\d{4}-\d{2}-\d{2}$/.test(value)
+    ) {
+      throw new Error(`The statistics snapshot has an invalid ${fieldName}.`);
+    }
+    const timestamp = Date.parse(`${value}T00:00:00Z`);
+    if (
+      !Number.isFinite(timestamp)
+      || new Date(timestamp).toISOString().slice(0, 10) !== value
+    ) {
+      throw new Error(`The statistics snapshot has an invalid ${fieldName}.`);
+    }
+    return timestamp;
+  }
+
+  function parseTasksDaily(payload, totalTasks, sampledAtMs) {
+    const expectedKeys = [
+      "baseline_total",
+      "baseline_utc_date",
+      "basis",
+      "increase",
+      "utc_date"
+    ];
+    if (
+      !payload
+      || typeof payload !== "object"
+      || Array.isArray(payload)
+      || Object.keys(payload).sort().join(",") !== expectedKeys.join(",")
+    ) {
+      throw new Error("The statistics snapshot has invalid daily task statistics.");
+    }
+
+    const utcDateMs = parseUtcDate(payload.utc_date, "daily task date");
+    const sampledUtcDate = new Date(sampledAtMs).toISOString().slice(0, 10);
+    if (payload.utc_date !== sampledUtcDate) {
+      throw new Error("The daily task date does not match sampled_at.");
+    }
+    if (!["estimated", "verified", "unavailable"].includes(payload.basis)) {
+      throw new Error("The statistics snapshot has an invalid daily task basis.");
+    }
+
+    if (payload.basis === "estimated") {
+      if (
+        payload.baseline_utc_date !== null
+        || payload.baseline_total !== null
+        || !Number.isInteger(payload.increase)
+        || payload.increase < 0
+        || payload.increase > totalTasks
+      ) {
+        throw new Error("The estimated daily task statistics are invalid.");
+      }
+    } else if (payload.basis === "verified") {
+      const baselineDateMs = parseUtcDate(
+        payload.baseline_utc_date,
+        "daily task baseline date"
+      );
+      if (
+        utcDateMs - baselineDateMs !== 24 * HOUR_MS
+        || !Number.isInteger(payload.baseline_total)
+        || payload.baseline_total < 0
+        || payload.baseline_total > totalTasks
+        || !Number.isInteger(payload.increase)
+        || payload.increase !== totalTasks - payload.baseline_total
+      ) {
+        throw new Error("The verified daily task statistics are invalid.");
+      }
+    } else if (
+      payload.baseline_utc_date !== null
+      || payload.baseline_total !== null
+      || payload.increase !== null
+    ) {
+      throw new Error("Unavailable daily task statistics cannot contain values.");
+    }
+
+    return {
+      utcDate: payload.utc_date,
+      baselineUtcDate: payload.baseline_utc_date,
+      baselineTotal: payload.baseline_total,
+      increase: payload.increase,
+      basis: payload.basis
+    };
+  }
+
   function parseSnapshot(payload) {
     if (!payload || typeof payload !== "object" || payload.schema_version !== 1) {
       throw new Error("The statistics snapshot has an unsupported schema.");
@@ -76,7 +161,8 @@
         sampledAtMs: null,
         totals: null,
         deltaSincePrevious: null,
-        growthPerHour: null
+        growthPerHour: null,
+        tasksDaily: null
       };
     }
 
@@ -127,13 +213,27 @@
     if (!Number.isInteger(totals.trajectories) || !Number.isInteger(totals.tasks)) {
       throw new Error("Trajectory and task totals must be integers.");
     }
+    const sampledAtMs = parseTimestamp(payload.sampled_at);
+    const tasksDaily = payload.tasks_daily === undefined
+      ? {
+        utcDate: new Date(sampledAtMs).toISOString().slice(0, 10),
+        baselineUtcDate: null,
+        baselineTotal: null,
+        increase: null,
+        basis: "unavailable"
+      }
+      : parseTasksDaily(
+        payload.tasks_daily,
+        totals.tasks,
+        sampledAtMs
+      );
 
     return {
       schemaVersion: 1,
       status: "ok",
       sampleId: payload.sample_id,
       sampledAt: payload.sampled_at,
-      sampledAtMs: parseTimestamp(payload.sampled_at),
+      sampledAtMs,
       totals: {
         trajectories: totals.trajectories,
         tasks: totals.tasks,
@@ -148,7 +248,8 @@
         trajectories: growth.trajectories,
         tasks: growth.tasks,
         trajectory_duration_seconds: growth.trajectory_duration_seconds
-      }
+      },
+      tasksDaily
     };
   }
 
@@ -291,6 +392,20 @@
       maximumFractionDigits: fractionDigits
     }).format(absolute);
     return `${sign}${formatted}${unit}`;
+  }
+
+  function formatTasksDailyRate(tasksDaily) {
+    if (
+      !tasksDaily
+      || tasksDaily.basis === "unavailable"
+      || !Number.isInteger(tasksDaily.increase)
+      || tasksDaily.increase < 0
+    ) {
+      return "";
+    }
+    const prefix = tasksDaily.basis === "estimated" ? "Est. " : "";
+    const sign = tasksDaily.increase > 0 ? "+" : "";
+    return `${prefix}${sign}${formatInteger(tasksDaily.increase)} / day`;
   }
 
   function growthDirection(value) {
@@ -479,6 +594,7 @@
       schedules = {};
       if (!snapshot || snapshot.status !== "ok") return;
       for (const [kind, definition] of Object.entries(metricDefinitions)) {
+        if (kind === "tasks") continue;
         const verifiedIncrease = snapshot.deltaSincePrevious[definition.rateKey];
         schedules[kind] = buildGrowthSchedule(
           Math.min(verifiedIncrease || 0, snapshot.totals[definition.totalKey]),
@@ -524,12 +640,14 @@
       }
 
       for (const [kind, definition] of Object.entries(metricDefinitions)) {
-        const liveProjected = projectMetric(
-          snapshot,
-          definition.totalKey,
-          nowMs,
-          schedules[kind]
-        );
+        const liveProjected = kind === "tasks"
+          ? snapshot.totals[definition.totalKey]
+          : projectMetric(
+            snapshot,
+            definition.totalKey,
+            nowMs,
+            schedules[kind]
+          );
         const projected = monotonicValue(
           liveProjected,
           lastRenderedValues[kind]
@@ -542,11 +660,17 @@
         renderRollingValue(elements[kind].value, valueText);
         elements[kind].value.classList.toggle("is-long", valueText.length > 7);
         elements[kind].value.removeAttribute("title");
-        const growth = snapshot.growthPerHour[definition.rateKey];
-        const rateText = formatRate(growth, kind);
+        const growth = kind === "tasks"
+          ? snapshot.tasksDaily.increase
+          : snapshot.growthPerHour[definition.rateKey];
+        const rateText = kind === "tasks"
+          ? formatTasksDailyRate(snapshot.tasksDaily)
+          : formatRate(growth, kind);
         setText(elements[kind].rate, rateText);
         elements[kind].rate.hidden = rateText === "";
-        const direction = growthDirection(growth);
+        const direction = kind === "tasks" && snapshot.tasksDaily.basis === "estimated"
+          ? growthDirection(null)
+          : growthDirection(growth);
         setText(elements[kind].arrow, direction.symbol);
         elements[kind].arrow.dataset.direction = direction.state;
       }
@@ -637,6 +761,7 @@
     distributedGrowth,
     formatDuration,
     formatRate,
+    formatTasksDailyRate,
     growthDirection,
     monotonicValue,
     rollingCharacters,

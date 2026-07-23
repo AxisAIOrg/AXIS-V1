@@ -21,8 +21,15 @@ function snapshot(overrides = {}) {
     },
     growthPerHour: {
       trajectories: 150,
-      tasks: 2,
+      tasks: null,
       trajectory_duration_seconds: 3600
+    },
+    tasksDaily: {
+      utcDate: "2026-07-23",
+      baselineUtcDate: "2026-07-22",
+      baselineTotal: 99,
+      increase: 1,
+      basis: "verified"
     },
     ...overrides
   };
@@ -34,6 +41,38 @@ test("parses an awaiting-first-sync bootstrap payload", () => {
     status: "awaiting_first_sync"
   });
   assert.equal(parsed.status, "awaiting_first_sync");
+});
+
+test("accepts the previous snapshot shape during a cached deployment rollover", () => {
+  const parsed = stats.parseSnapshot({
+    schema_version: 1,
+    status: "ok",
+    sample_id: "sample-legacy",
+    sampled_at: "2026-07-23T12:00:00Z",
+    totals: {
+      trajectories: 100,
+      tasks: 10,
+      trajectory_duration_seconds: 3600
+    },
+    delta_since_previous: {
+      trajectories: 5,
+      tasks: 1,
+      trajectory_duration_seconds: 60
+    },
+    growth_per_hour: {
+      trajectories: 5,
+      tasks: 1,
+      trajectory_duration_seconds: 60
+    }
+  });
+
+  assert.deepEqual(parsed.tasksDaily, {
+    utcDate: "2026-07-23",
+    baselineUtcDate: null,
+    baselineTotal: null,
+    increase: null,
+    basis: "unavailable"
+  });
 });
 
 test("rejects unsafe totals", () => {
@@ -54,8 +93,15 @@ test("rejects unsafe totals", () => {
     },
     growth_per_hour: {
       trajectories: 1,
-      tasks: 1,
+      tasks: null,
       trajectory_duration_seconds: 1
+    },
+    tasks_daily: {
+      utc_date: "2026-07-23",
+      baseline_utc_date: "2026-07-22",
+      baseline_total: 9,
+      increase: 1,
+      basis: "verified"
     }
   }));
 });
@@ -106,7 +152,6 @@ test("checked-in database delta plays from the previous totals to the latest tot
   const value = stats.parseSnapshot(checkedInPayload);
   const metrics = {
     trajectories: true,
-    tasks: true,
     trajectory_duration_seconds: false
   };
 
@@ -138,6 +183,42 @@ test("checked-in database delta plays from the previous totals to the latest tot
   }
 });
 
+test("tasks use the measured total and a daily growth label", () => {
+  const value = stats.parseSnapshot(checkedInPayload);
+  assert.equal(value.totals.tasks, 1816);
+  assert.deepEqual(value.tasksDaily, {
+    utcDate: "2026-07-23",
+    baselineUtcDate: null,
+    baselineTotal: null,
+    increase: 9,
+    basis: "estimated"
+  });
+  assert.equal(
+    stats.formatTasksDailyRate(value.tasksDaily),
+    "Est. +9 / day"
+  );
+  assert.equal(
+    stats.formatTasksDailyRate({
+      ...value.tasksDaily,
+      baselineUtcDate: "2026-07-23",
+      baselineTotal: 1816,
+      increase: 0,
+      basis: "verified"
+    }),
+    "0 / day"
+  );
+  assert.equal(
+    stats.formatTasksDailyRate({
+      utcDate: "2026-07-25",
+      baselineUtcDate: null,
+      baselineTotal: null,
+      increase: null,
+      basis: "unavailable"
+    }),
+    ""
+  );
+});
+
 test("negative input never decreases or renders as negative growth", () => {
   const value = snapshot({
     deltaSincePrevious: {
@@ -147,7 +228,7 @@ test("negative input never decreases or renders as negative growth", () => {
     },
     growthPerHour: {
       trajectories: -10,
-      tasks: 0,
+      tasks: null,
       trajectory_duration_seconds: 0
     }
   });

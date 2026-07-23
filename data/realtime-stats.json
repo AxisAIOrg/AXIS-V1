@@ -5,7 +5,7 @@
     "trajectory_duration_seconds": 258058.584
   },
   "growth_per_hour": {
-    "tasks": 0.0,
+    "tasks": null,
     "trajectories": 1448.849,
     "trajectory_duration_seconds": 225777.66
   },
@@ -15,6 +15,13 @@
   "sampled_at": "2026-07-23T21:22:56Z",
   "schema_version": 1,
   "status": "ok",
+  "tasks_daily": {
+    "baseline_total": null,
+    "baseline_utc_date": null,
+    "basis": "estimated",
+    "increase": 9,
+    "utc_date": "2026-07-23"
+  },
   "totals": {
     "tasks": 1816,
     "trajectories": 1531931,

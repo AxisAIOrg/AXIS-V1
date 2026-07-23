@@ -44,7 +44,10 @@ class HomepageIntegrationTests(unittest.TestCase):
         }
         self.assertTrue(expected_ids.issubset(parser.ids))
         self.assertEqual(parser.stats_url, "./data/realtime-stats.json")
-        self.assertIn("realtime-stats.js", parser.scripts)
+        self.assertIn(
+            "realtime-stats.js?v=20260723-daily-tasks",
+            parser.scripts,
+        )
 
     def test_realtime_title_precedes_requested_metric_layout(self):
         homepage = Path("index.html").read_text(encoding="utf-8")
@@ -78,7 +81,12 @@ class HomepageIntegrationTests(unittest.TestCase):
         self.assertNotIn("Collecting hourly baseline", script)
         self.assertNotIn(">Baseline<", homepage)
         self.assertNotIn('"Baseline"', script)
-        self.assertIn("Data is verified once every hour.", homepage)
+        self.assertIn(
+            "Data is verified once every hour. Task growth is calculated daily.",
+            homepage,
+        )
+        self.assertIn("formatTasksDailyRate", script)
+        self.assertIn('"Est. "', script)
         self.assertNotIn("Last verified", script)
 
     def test_stats_use_black_nonwrapping_two_row_layout(self):
@@ -128,6 +136,7 @@ class HomepageIntegrationTests(unittest.TestCase):
             "totals",
             "delta_since_previous",
             "growth_per_hour",
+            "tasks_daily",
         }
         self.assertEqual(set(payload), expected_keys)
         self.assertIsNone(payload["sample_id"])
@@ -140,6 +149,16 @@ class HomepageIntegrationTests(unittest.TestCase):
                 {"trajectories", "tasks", "trajectory_duration_seconds"},
             )
             self.assertTrue(all(value is None for value in payload[field].values()))
+        self.assertEqual(
+            payload["tasks_daily"],
+            {
+                "utc_date": None,
+                "baseline_utc_date": None,
+                "baseline_total": None,
+                "increase": None,
+                "basis": "unavailable",
+            },
+        )
 
 
 if __name__ == "__main__":

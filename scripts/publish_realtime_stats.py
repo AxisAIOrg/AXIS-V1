@@ -10,7 +10,7 @@ import math
 import os
 import re
 import time
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -20,6 +20,15 @@ from urllib.request import Request, urlopen
 
 API_VERSION = "2026-03-10"
 METRIC_KEYS = ("trajectories", "tasks", "trajectory_duration_seconds")
+TASKS_DAILY_KEYS = {
+    "utc_date",
+    "baseline_utc_date",
+    "baseline_total",
+    "increase",
+    "basis",
+}
+TASKS_DAILY_BASES = {"estimated", "verified", "unavailable"}
+MAX_TASK_DAILY_BASELINE_AGE = timedelta(hours=6)
 
 
 class PublishError(RuntimeError):
@@ -78,6 +87,117 @@ class GitHubClient:
         return parsed
 
 
+def parse_utc_date(value: Any, field_name: str) -> date:
+    if not isinstance(value, str):
+        raise PublishError(f"The generated {field_name} is invalid.")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        raise PublishError(f"The generated {field_name} is invalid.") from None
+    if parsed.isoformat() != value:
+        raise PublishError(f"The generated {field_name} is invalid.")
+    return parsed
+
+
+def validate_nonnegative_integer(value: Any, field_name: str) -> int:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or not float(value).is_integer()
+        or value < 0
+        or value > 2**53 - 1
+    ):
+        raise PublishError(f"The generated {field_name} is invalid.")
+    return int(value)
+
+
+def validate_tasks_daily(
+    payload: Any,
+    total_tasks: int,
+    sampled_utc_date: date,
+) -> dict[str, Any]:
+    if not isinstance(payload, dict) or set(payload) != TASKS_DAILY_KEYS:
+        raise PublishError("The generated daily task statistics are invalid.")
+
+    utc_date = parse_utc_date(payload.get("utc_date"), "daily task date")
+    if utc_date != sampled_utc_date:
+        raise PublishError(
+            "The generated daily task date does not match the snapshot date."
+        )
+    basis = payload.get("basis")
+    if basis not in TASKS_DAILY_BASES:
+        raise PublishError("The generated daily task basis is invalid.")
+
+    baseline_date_value = payload.get("baseline_utc_date")
+    baseline_total_value = payload.get("baseline_total")
+    increase_value = payload.get("increase")
+
+    if basis == "estimated":
+        if baseline_date_value is not None or baseline_total_value is not None:
+            raise PublishError(
+                "Estimated daily task statistics cannot contain a baseline."
+            )
+        increase = validate_nonnegative_integer(
+            increase_value,
+            "estimated daily task increase",
+        )
+        if increase > total_tasks:
+            raise PublishError(
+                "The estimated daily task increase exceeds the task total."
+            )
+        baseline_utc_date = None
+        baseline_total = None
+    elif basis == "verified":
+        baseline_utc_date = parse_utc_date(
+            baseline_date_value,
+            "daily task baseline date",
+        )
+        if utc_date - baseline_utc_date != timedelta(days=1):
+            raise PublishError(
+                "The generated daily task baseline is not the previous UTC date."
+            )
+        baseline_total = validate_nonnegative_integer(
+            baseline_total_value,
+            "daily task baseline",
+        )
+        increase = validate_nonnegative_integer(
+            increase_value,
+            "daily task increase",
+        )
+        if baseline_total > total_tasks or increase != total_tasks - baseline_total:
+            raise PublishError(
+                "The generated daily task increase does not match its baseline."
+            )
+    else:
+        if any(
+            value is not None
+            for value in (
+                baseline_date_value,
+                baseline_total_value,
+                increase_value,
+            )
+        ):
+            raise PublishError(
+                "Unavailable daily task statistics cannot contain values."
+            )
+        baseline_utc_date = None
+        baseline_total = None
+        increase = None
+
+    return {
+        "utc_date": utc_date.isoformat(),
+        "baseline_utc_date": (
+            baseline_utc_date.isoformat()
+            if isinstance(baseline_utc_date, date)
+            else None
+        ),
+        "baseline_total": baseline_total,
+        "increase": increase,
+        "basis": basis,
+    }
+
+
 def validate_public_snapshot(path: Path) -> tuple[bytes, str]:
     try:
         raw = path.read_bytes()
@@ -95,6 +215,7 @@ def validate_public_snapshot(path: Path) -> tuple[bytes, str]:
         "totals",
         "delta_since_previous",
         "growth_per_hour",
+        "tasks_daily",
     }
     if not isinstance(payload, dict) or set(payload) != expected_top_level:
         raise PublishError("The generated statistics snapshot has an invalid schema.")
@@ -107,9 +228,11 @@ def validate_public_snapshot(path: Path) -> tuple[bytes, str]:
     ):
         raise PublishError("The generated statistics snapshot has an invalid schema.")
 
+    parsed_timestamps: dict[str, datetime | None] = {}
     for timestamp_key in ("sampled_at", "previous_sampled_at"):
         timestamp = payload.get(timestamp_key)
         if timestamp is None and timestamp_key == "previous_sampled_at":
+            parsed_timestamps[timestamp_key] = None
             continue
         try:
             parsed_timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
@@ -121,6 +244,7 @@ def validate_public_snapshot(path: Path) -> tuple[bytes, str]:
             raise PublishError(
                 f"The generated {timestamp_key} timestamp must include a timezone."
             )
+        parsed_timestamps[timestamp_key] = parsed_timestamp.astimezone(timezone.utc)
 
     totals = payload.get("totals")
     delta = payload.get("delta_since_previous")
@@ -134,6 +258,16 @@ def validate_public_snapshot(path: Path) -> tuple[bytes, str]:
         or set(growth) != set(METRIC_KEYS)
     ):
         raise PublishError("The generated statistics snapshot is missing metrics.")
+
+    tasks_total = validate_nonnegative_integer(
+        totals.get("tasks"),
+        "tasks total",
+    )
+    validate_tasks_daily(
+        payload.get("tasks_daily"),
+        tasks_total,
+        parsed_timestamps["sampled_at"].date(),
+    )
 
     for key in METRIC_KEYS:
         total = totals.get(key)
@@ -173,13 +307,13 @@ def validate_public_snapshot(path: Path) -> tuple[bytes, str]:
     has_previous = payload.get("previous_sampled_at") is not None
     if has_previous != (interval is not None):
         raise PublishError("The generated previous-snapshot metadata is inconsistent.")
-    expected_missing_rates = not has_previous
-    if any(
-        (delta[key] is None) != expected_missing_rates
-        or (growth[key] is None) != expected_missing_rates
-        for key in METRIC_KEYS
-    ):
+    if any((delta[key] is None) != (not has_previous) for key in METRIC_KEYS):
         raise PublishError("The generated growth metadata is inconsistent.")
+    for key in ("trajectories", "trajectory_duration_seconds"):
+        if (growth[key] is None) != (not has_previous):
+            raise PublishError("The generated growth metadata is inconsistent.")
+    if growth["tasks"] is not None:
+        raise PublishError("Hourly task growth must not be published.")
 
     # This branch is publicly served. Refuse oversized output so an accidental
     # row-level dump can never be committed by this workflow. Re-serialize only
@@ -248,6 +382,10 @@ def validate_monotonic_against_previous(
             raise PublishError(
                 f"The generated {key} delta does not match the previous snapshot."
             )
+        if key == "tasks":
+            if new_payload["growth_per_hour"][key] is not None:
+                raise PublishError("Hourly task growth must not be published.")
+            continue
         expected_rate = round(expected_delta * 3600 / expected_interval, 3)
         if not math.isclose(
             new_payload["growth_per_hour"][key],
@@ -258,6 +396,58 @@ def validate_monotonic_against_previous(
             raise PublishError(
                 f"The generated {key} rate does not match the sample interval."
             )
+
+    new_daily = new_payload["tasks_daily"]
+    previous_daily = previous_payload["tasks_daily"]
+    new_date = parse_utc_date(new_daily["utc_date"], "daily task date")
+    previous_date = parse_utc_date(
+        previous_daily["utc_date"],
+        "previous daily task date",
+    )
+    day_gap = new_date - previous_date
+
+    if day_gap == timedelta(0):
+        if new_daily["basis"] != previous_daily["basis"]:
+            raise PublishError(
+                "The daily task basis changed within the same UTC date."
+            )
+        if new_daily["basis"] in {"estimated", "unavailable"}:
+            if new_daily != previous_daily:
+                raise PublishError(
+                    "Daily task metadata changed within the same UTC date."
+                )
+        else:
+            if (
+                new_daily["baseline_utc_date"]
+                != previous_daily["baseline_utc_date"]
+                or new_daily["baseline_total"]
+                != previous_daily["baseline_total"]
+                or new_daily["increase"] < previous_daily["increase"]
+            ):
+                raise PublishError(
+                    "The verified daily task baseline changed unexpectedly."
+                )
+    elif day_gap == timedelta(days=1):
+        if expected_interval <= MAX_TASK_DAILY_BASELINE_AGE.total_seconds():
+            if (
+                new_daily["basis"] != "verified"
+                or new_daily["baseline_utc_date"] != previous_date.isoformat()
+                or new_daily["baseline_total"] != previous_payload["totals"]["tasks"]
+            ):
+                raise PublishError(
+                    "The new UTC day does not use the previous task total as its baseline."
+                )
+        elif new_daily["basis"] != "unavailable":
+            raise PublishError(
+                "A stale task baseline cannot be published as a daily increase."
+            )
+    elif day_gap > timedelta(days=1):
+        if new_daily["basis"] != "unavailable":
+            raise PublishError(
+                "A multi-day task gap cannot be published as a daily increase."
+            )
+    else:
+        raise PublishError("The daily task date moved backwards.")
 
 
 def assert_legacy_pages_source(
