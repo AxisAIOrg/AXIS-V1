@@ -48,6 +48,7 @@ jobs:
             "data/realtime-stats.json"
             "index.html"
             "realtime-stats.js"
+            "style.css"
             "scripts/collect_realtime_stats.py"
             "scripts/publish_realtime_stats.py"
             "tests/realtime-stats.test.js"
