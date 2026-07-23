@@ -29,7 +29,28 @@
       <h2>A Growable Community-Driven Data Engine<br />for Scalable Robot Manipulation</h2>
 
       <p class="authors">
-        Axis Robotics Team
+        Mengfei Zhao<sup>*,‡</sup>, Dihong Huang<sup>1,2*</sup>, Yikai Tang<sup>2*</sup>,
+        Peihao Li<sup>2*</sup>, Mingxuan Yan<sup>3*</sup>, Ruiqi Zhuang<sup>1*</sup>,
+        Yanjia Huang<sup>4*</sup>, Jie Wang<sup>1,5</sup>, Hai Zhai<sup>1</sup>,
+        Tony Zhou<sup>1,6</sup>, Rui Zhang<sup>1,7</sup>, Zhexi Luo<sup>1,8</sup>,
+        Yuchen Huang<sup>1,7</sup>, Jianfei Yang<sup>9‡</sup>, Jiachen Li<sup>3‡</sup>
+      </p>
+
+      <p class="affiliations">
+        <span><sup>1</sup>Axis Robotics</span>
+        <span><sup>2</sup>University of California, Berkeley</span>
+        <span><sup>3</sup>Georgia Institute of Technology</span>
+        <span><sup>4</sup>Texas A&amp;M University</span>
+        <span><sup>5</sup>Johns Hopkins University</span>
+        <span><sup>6</sup>University of Pennsylvania</span>
+        <span><sup>7</sup>University of Michigan</span>
+        <span><sup>8</sup>National University of Singapore</span>
+        <span><sup>9</sup>Nanyang Technological University</span>
+      </p>
+
+      <p class="author-notes">
+        <sup>*</sup>Equal contribution &nbsp;&nbsp;
+        <sup>‡</sup>zhaomengfei248@gmail.com, jianfei.yang@ntu.edu.sg, jiachen_li@gatech.edu
       </p>
 
       <p class="hero-copy">
@@ -39,16 +60,16 @@
       </p>
 
       <div class="quick-links" aria-label="Project links">
-        <a href="assets/paper/AXIS_CoRL2026_full_paper_with_appendix.pdf">[paper]</a>
+        <a href="assets/paper/AXIS-V1_Release.pdf">[paper]</a>
         <a href="https://huggingface.co/datasets/axisrobotics/Franka-Dataset">[Dataset (Hugging Face)]</a>
         <a href="https://hub.axisrobotics.ai/?tab=hub">[Platform]</a>
         <a class="primary-link" href="data-browser/">Dataset Browser</a>
       </div>
 
       <section class="stats-strip" aria-label="Dataset snapshot">
-        <article><strong>917,313</strong><span>Trajectories counted</span></article>
-        <article><strong>1056h 32m</strong><span>Estimated duration</span></article>
-        <article><strong>1,006</strong><span>Tasks counted</span></article>
+        <article><strong>207</strong><span>Diverse tasks</span></article>
+        <article><strong>50K+</strong><span>Trajectories</span></article>
+        <article><strong>60K+</strong><span>Task/scene variants</span></article>
         <article><strong>FR3</strong><span>Robot embodiment</span></article>
       </section>
 
@@ -66,31 +87,35 @@
     </header>
 
     <section class="section" id="abstract">
-      <div class="tagline">Abstract.</div>
+      <div class="tagline">Abstract</div>
 
       <p>
-        Robot manipulation policies require diverse, high-quality demonstrations, but existing data
-        pipelines are hard to scale because they often rely on specialized hardware, centralized operators,
-        or fixed task suites. AXIS is a growable community-driven data engine and benchmark for scalable
-        manipulation learning.
+        Learning effective robot manipulation policies requires diverse, high-quality demonstrations, yet
+        existing data pipelines are often difficult to scale because they rely on specialized hardware,
+        centralized operators, or fixed task suites. We present AXIS, a growable community-driven data
+        engine and benchmark for scalable robot learning, which enables browser-based teleoperation for
+        large-scale demonstration collection, automatically generates and validates new manipulation tasks,
+        and transforms community-collected demonstrations into training-ready data through automated success
+        checking, quality filtering, trajectory smoothing, and visual and physics-based augmentation.
       </p>
 
       <p>
-        AXIS collects demonstrations through browser-based MuJoCo-WASM teleoperation, generates and
-        validates new tasks automatically, and converts community demonstrations into training-ready data
-        through success checking, filtering, smoothing, resampling, and IsaacSim-based visual and physics
-        augmentation.
+        The AXIS dataset currently contains 207 diverse tasks and 50K+ trajectories. Meanwhile, AXIS
+        organizes data into task snapshots and evaluates policies with a systematic held-out protocol. We
+        compare vision-language-action (VLA) policies under a unified AXIS evaluation suite and analyze
+        scaling behavior across different data volumes.
       </p>
 
       <p>
-        To make growth measurable, AXIS organizes data into task snapshots and evaluates policies with a
-        fixed held-out protocol. The current experiments compare representative vision-language-action
-        baselines and study scaling behavior across AXIS-25%, AXIS-50%, and AXIS-100%.
+        Continual pretraining on AXIS substantially improves the overall success rate of π<sub>0.5</sub> by
+        5.8%, outperforms the model pretrained on RoboCasa365 by 37.3%, and exhibits consistent scaling with
+        increasing data volume, with the largest gains observed under layout, sensor-noise, and camera
+        perturbations.
       </p>
     </section>
 
     <section class="section" id="collection">
-      <div class="tagline">Scalable Robot Data Collection.</div>
+      <div class="tagline">Scalable Robot Data Collection</div>
 
       <p class="pull-quote">
         Collection stays lightweight in the browser; validation, rendering, augmentation, and learning run on the backend.
@@ -181,7 +206,7 @@
     </section>
 
     <section class="section" id="dataset">
-      <div class="tagline">The AXIS Franka Dataset.</div>
+      <div class="tagline">The AXIS Franka Dataset</div>
 
       <p>
         AXIS is a tabletop manipulation dataset built around a Franka Research 3 robot with a
@@ -193,9 +218,9 @@
       <div class="dataset-panel">
         <h3>Dataset snapshot</h3>
         <dl class="snapshot-list">
-          <div><dt>Tasks</dt><dd>1,006</dd></div>
-          <div><dt>Trajectories</dt><dd>917,313</dd></div>
-          <div><dt>Duration</dt><dd>1056h 32m</dd></div>
+          <div><dt>Tasks</dt><dd>207</dd></div>
+          <div><dt>Trajectories</dt><dd>50K+</dd></div>
+          <div><dt>Task/scene variants</dt><dd>60K+</dd></div>
           <div><dt>Robot</dt><dd>Franka Research 3</dd></div>
           <div><dt>Cameras</dt><dd>Third-view + wrist RGB-D</dd></div>
           <div><dt>Evaluation</dt><dd>Fixed held-out protocol</dd></div>
@@ -360,7 +385,7 @@
     </section>
 
     <section class="section" id="experiments">
-      <div class="tagline">Experiments.</div>
+      <div class="tagline">Experiments</div>
 
       <p>
         The experiments evaluate whether AXIS pretraining improves downstream LIBERO-Plus robustness
@@ -370,8 +395,8 @@
 
       <div class="result-callout">
         <strong>Headline result.</strong>
-        π0.5 + AXIS-100% reaches <b>79.4</b> overall LIBERO-Plus success, compared with
-        <b>66.5</b> for vanilla π0.5 and <b>57.5</b> for a RoboCasa-matched simulation baseline.
+        π0.5 + AXIS-100% reaches <b>88.8</b> overall LIBERO-Plus success, compared with
+        <b>83.9</b> for vanilla π0.5 and <b>57.5</b> for a RoboCasa-matched simulation baseline.
       </div>
 
       <div class="table-wrap" role="region" aria-label="Main result table" tabindex="0">
@@ -395,50 +420,50 @@
             <tr>
               <td>π0.5 vanilla</td>
               <td>0</td>
-              <td>66.5</td>
-              <td>50.3</td>
-              <td>90.6</td>
-              <td>61.8</td>
-              <td>87.7</td>
-              <td>61.7</td>
-              <td>71.9</td>
-              <td>54.8</td>
+              <td>83.9</td>
+              <td>72.5</td>
+              <td>98.2</td>
+              <td>82.5</td>
+              <td>94.4</td>
+              <td>82.9</td>
+              <td>89.6</td>
+              <td>74.4</td>
             </tr>
             <tr>
               <td>π0.5 + AXIS-25%</td>
               <td>0.25 N<sub>AXIS</sub></td>
-              <td>72.0</td>
-              <td>56.1</td>
-              <td>91.8</td>
-              <td>68.1</td>
-              <td>89.1</td>
-              <td>72.1</td>
-              <td>76.0</td>
-              <td>61.3</td>
+              <td>84.7</td>
+              <td>77.5</td>
+              <td>91.2</td>
+              <td>86.2</td>
+              <td>100.0</td>
+              <td>85.5</td>
+              <td>81.8</td>
+              <td>76.9</td>
             </tr>
             <tr>
               <td>π0.5 + AXIS-50%</td>
               <td>0.50 N<sub>AXIS</sub></td>
-              <td>75.1</td>
-              <td>59.7</td>
-              <td>92.5</td>
-              <td>72.5</td>
-              <td>89.6</td>
-              <td>77.9</td>
-              <td>78.3</td>
-              <td>65.1</td>
+              <td>85.7</td>
+              <td>68.8</td>
+              <td>98.2</td>
+              <td>91.2</td>
+              <td>96.3</td>
+              <td>88.2</td>
+              <td>84.4</td>
+              <td>79.5</td>
             </tr>
             <tr class="ours">
               <td>π0.5 + AXIS-100% (ours)</td>
               <td>N<sub>AXIS</sub></td>
-              <td>79.4</td>
-              <td>65.5</td>
-              <td>93.1</td>
-              <td>78.5</td>
-              <td>90.4</td>
-              <td>84.9</td>
-              <td>81.1</td>
-              <td>70.2</td>
+              <td>88.8</td>
+              <td>83.8</td>
+              <td>96.5</td>
+              <td>96.2</td>
+              <td>98.1</td>
+              <td>85.5</td>
+              <td>88.3</td>
+              <td>78.2</td>
             </tr>
             <tr>
               <td>π0.5 + RoboCasa-matched</td>
@@ -460,27 +485,27 @@
 
       <div class="card-grid four-col compact">
         <article>
-          <h3>Layout</h3>
-          <strong>+23.2</strong>
-          <p>Largest gain over vanilla, matching AXIS spatial randomization.</p>
-        </article>
-
-        <article>
           <h3>Sensor Noise</h3>
-          <strong>+16.7</strong>
-          <p>Robustness improves under photometric observation shifts.</p>
-        </article>
-
-        <article>
-          <h3>Robot Pose</h3>
-          <strong>+15.4</strong>
-          <p>AXIS helps beyond explicitly randomized perturbation axes.</p>
+          <strong>+13.7</strong>
+          <p>Largest gain over vanilla; robustness improves under photometric observation shifts.</p>
         </article>
 
         <article>
           <h3>Camera</h3>
-          <strong>+15.2</strong>
+          <strong>+11.3</strong>
           <p>Viewpoint variation transfers to LIBERO-Plus camera shifts.</p>
+        </article>
+
+        <article>
+          <h3>Robot Pose</h3>
+          <strong>+3.8</strong>
+          <p>AXIS helps beyond explicitly randomized perturbation axes.</p>
+        </article>
+
+        <article>
+          <h3>Background</h3>
+          <strong>+3.7</strong>
+          <p>Scene and texture randomization improves background robustness.</p>
         </article>
       </div>
 
@@ -501,75 +526,75 @@
           <tbody>
             <tr>
               <td>Camera</td>
-              <td>50.3</td>
-              <td>56.1</td>
-              <td>65.5</td>
+              <td>72.5</td>
+              <td>77.5</td>
+              <td>83.8</td>
               <td>35.2</td>
-              <td>+15.2</td>
-              <td>+30.3</td>
+              <td>+11.3</td>
+              <td>+48.6</td>
             </tr>
             <tr>
               <td>Light</td>
-              <td>90.6</td>
-              <td>91.8</td>
-              <td>93.1</td>
+              <td>98.2</td>
+              <td>91.2</td>
+              <td>96.5</td>
               <td>79.5</td>
-              <td>+2.5</td>
-              <td>+13.6</td>
+              <td>−1.7</td>
+              <td>+17.0</td>
             </tr>
             <tr>
               <td>Sensor Noise</td>
-              <td>61.8</td>
-              <td>68.1</td>
-              <td>78.5</td>
+              <td>82.5</td>
+              <td>86.2</td>
+              <td>96.2</td>
               <td>63.2</td>
-              <td>+16.7</td>
-              <td>+15.3</td>
+              <td>+13.7</td>
+              <td>+33.0</td>
             </tr>
             <tr>
               <td>Background</td>
-              <td>87.7</td>
-              <td>89.1</td>
-              <td>90.4</td>
+              <td>94.4</td>
+              <td>100.0</td>
+              <td>98.1</td>
               <td>81.7</td>
-              <td>+2.7</td>
-              <td>+8.7</td>
+              <td>+3.7</td>
+              <td>+16.4</td>
             </tr>
             <tr>
               <td>Layout</td>
-              <td>61.7</td>
-              <td>72.1</td>
-              <td>84.9</td>
+              <td>82.9</td>
+              <td>85.5</td>
+              <td>85.5</td>
               <td>68.0</td>
-              <td>+23.2</td>
-              <td>+16.9</td>
+              <td>+2.6</td>
+              <td>+17.5</td>
             </tr>
             <tr>
               <td>Language</td>
-              <td>71.9</td>
-              <td>76.0</td>
-              <td>81.1</td>
+              <td>89.6</td>
+              <td>81.8</td>
+              <td>88.3</td>
               <td>49.2</td>
-              <td>+9.2</td>
-              <td>+31.9</td>
+              <td>−1.3</td>
+              <td>+39.1</td>
             </tr>
             <tr>
               <td>Robot</td>
-              <td>54.8</td>
-              <td>61.3</td>
-              <td>70.2</td>
+              <td>74.4</td>
+              <td>76.9</td>
+              <td>78.2</td>
               <td>39.4</td>
-              <td>+15.4</td>
-              <td>+30.8</td>
+              <td>+3.8</td>
+              <td>+38.8</td>
             </tr>
             <tr class="ours">
               <td>Overall</td>
-              <td>66.5</td>
-              <td>72.0</td>
-              <td>79.4</td>
+              <td>83.9</td>
+              <td>84.7</td>
+              <td>88.8</td>
               <td>57.5</td>
-              <td>+12.9</td>
-              <td>+21.9</td>
+              <td>+4.9</td>
+              <td>+31.3</td>
             </tr>
           </tbody>
         </table>
@@ -614,7 +639,7 @@
     </section>
 
     <section class="section" id="bibtex">
-      <div class="tagline">BibTeX.</div>
+      <div class="tagline">BibTeX</div>
 
       <div class="bibtex-code">
         <div class="bibtex-title">
@@ -624,15 +649,14 @@
 
 <pre><code>@misc{axis2026growable,
   title        = {AXIS: A Growable Community-Driven Data Engine for Scalable Robot Manipulation},
-  author       = {{Axis Robotics Team}},
-  year         = {2026},
-  note         = {CoRL 2026 submission}
+  author       = {Zhao, Mengfei and Huang, Dihong and Tang, Yikai and Li, Peihao and Yan, Mingxuan and Zhuang, Ruiqi and Huang, Yanjia and Wang, Jie and Zhai, Hai and Zhou, Tony and Zhang, Rui and Luo, Zhexi and Huang, Yuchen and Yang, Jianfei and Li, Jiachen},
+  year         = {2026}
 }</code></pre>
       </div>
     </section>
 
     <footer class="footer">
-      <p>© 2026 Axis Robotics Team. Website scaffold for the AXIS project page.</p>
+      <p>© 2026 AXIS. Website for the AXIS project page.</p>
       <p><a href="#top">Back to top ↑</a></p>
     </footer>
   </main>
