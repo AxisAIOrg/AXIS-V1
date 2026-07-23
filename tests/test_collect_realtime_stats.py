@@ -192,6 +192,40 @@ class CollectRealtimeStatsTests(unittest.TestCase):
             3600,
         )
 
+    def test_subsecond_database_time_matches_serialized_sample_interval(self):
+        previous_time = datetime(2026, 7, 23, 10, 0, tzinfo=timezone.utc)
+        sampled_at = datetime(
+            2026,
+            7,
+            23,
+            11,
+            0,
+            0,
+            750_000,
+            tzinfo=timezone.utc,
+        )
+        snapshot = build_snapshot(
+            {
+                "trajectories": 1_100,
+                "tasks": 100,
+                "trajectory_duration_seconds": 53_600,
+            },
+            sampled_at,
+            {
+                "sampled_at": previous_time,
+                "totals": {
+                    "trajectories": 1_000,
+                    "tasks": 100,
+                    "trajectory_duration_seconds": 50_000,
+                },
+                "tasks_daily": estimated_tasks_daily("2026-07-23"),
+            },
+        )
+
+        self.assertEqual(snapshot["sampled_at"], "2026-07-23T11:00:00Z")
+        self.assertEqual(snapshot["sample_interval_seconds"], 3600)
+        self.assertEqual(snapshot["growth_per_hour"]["trajectories"], 100)
+
     def test_estimated_task_growth_stays_fixed_for_bootstrap_day(self):
         previous_time = datetime(2026, 7, 23, 10, 0, tzinfo=timezone.utc)
         daily = build_tasks_daily(

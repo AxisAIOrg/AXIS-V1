@@ -283,7 +283,9 @@ def build_tasks_daily(
         raise StatsCollectionError(
             "The database snapshot timestamp must include a timezone."
         )
-    sampled_at_utc = sampled_at.astimezone(timezone.utc)
+    # The public timestamp is serialized to whole seconds. Normalize before
+    # calculating intervals so publisher validation uses the same clock values.
+    sampled_at_utc = sampled_at.astimezone(timezone.utc).replace(microsecond=0)
     utc_date = sampled_at_utc.date()
 
     if previous is None:
@@ -448,7 +450,9 @@ def build_snapshot(
     clean_totals = validate_totals(totals)
     if sampled_at.tzinfo is None:
         raise StatsCollectionError("The database snapshot timestamp must include a timezone.")
-    sampled_at_utc = sampled_at.astimezone(timezone.utc)
+    # The public timestamp is serialized to whole seconds. Normalize before
+    # calculating intervals so publisher validation uses the same clock values.
+    sampled_at_utc = sampled_at.astimezone(timezone.utc).replace(microsecond=0)
     sampled_at_text = format_utc_timestamp(sampled_at_utc)
     interval_seconds: float | None = None
     previous_sampled_at: str | None = None
