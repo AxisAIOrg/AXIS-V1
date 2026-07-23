@@ -60,11 +60,89 @@
         <a class="primary-link" href="data-browser/">Dataset Browser</a>
       </div>
 
-      <section class="stats-strip" aria-label="Dataset snapshot">
-        <article><strong>207</strong><span>Diverse tasks</span></article>
-        <article><strong>50K+</strong><span>Trajectories</span></article>
-        <article><strong>60K+</strong><span>Task/scene variants</span></article>
-        <article><strong>FR3</strong><span>Robot embodiment</span></article>
+      <section
+        class="realtime-stats"
+        id="realtime-statistics"
+        aria-labelledby="stats-heading-title"
+        aria-busy="false"
+        data-state="unavailable"
+        data-stats-url="./data/realtime-stats.json"
+      >
+        <div class="stats-heading">
+          <h3 class="stats-heading-title" id="stats-heading-title">
+            <span class="stats-live-dot" aria-hidden="true"></span>
+            Real-time statistics
+          </h3>
+          <p
+            class="stats-state-announcement"
+            id="stats-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></p>
+        </div>
+
+        <div class="stats-strip">
+          <article
+            class="stats-card stats-card--trajectories"
+            aria-labelledby="stats-trajectories-label"
+            aria-describedby="stats-trajectories-rate"
+          >
+            <div class="stats-value-row">
+              <strong class="stats-value is-long" id="stats-trajectories">1,530,275</strong>
+              <span
+                class="stats-growth-arrow"
+                id="stats-trajectories-arrow"
+                data-direction="potential"
+                aria-hidden="true"
+              >↗</span>
+            </div>
+            <span class="stats-label" id="stats-trajectories-label">Trajectories</span>
+            <span class="stats-rate" id="stats-trajectories-rate" hidden></span>
+          </article>
+
+          <article
+            class="stats-card stats-card--tasks"
+            aria-labelledby="stats-tasks-label"
+            aria-describedby="stats-tasks-rate"
+          >
+            <div class="stats-value-row">
+              <strong class="stats-value" id="stats-tasks">1,816</strong>
+              <span
+                class="stats-growth-arrow"
+                id="stats-tasks-arrow"
+                data-direction="potential"
+                aria-hidden="true"
+              >↗</span>
+            </div>
+            <span class="stats-label" id="stats-tasks-label">Tasks</span>
+            <span class="stats-rate" id="stats-tasks-rate" hidden></span>
+          </article>
+
+          <article
+            class="stats-card stats-card--duration"
+            aria-labelledby="stats-duration-label"
+            aria-describedby="stats-duration-rate"
+          >
+            <div class="stats-value-row">
+              <strong class="stats-value is-long" id="stats-duration">13,645 h 7 m</strong>
+              <span
+                class="stats-growth-arrow"
+                id="stats-duration-arrow"
+                data-direction="potential"
+                aria-hidden="true"
+              >↗</span>
+            </div>
+            <span class="stats-label" id="stats-duration-label">Trajectory duration</span>
+            <span class="stats-rate" id="stats-duration-rate" hidden></span>
+          </article>
+        </div>
+
+        <p class="stats-verification-note">Data is verified once every hour.</p>
+
+        <noscript class="stats-noscript">
+          Enable JavaScript to display the latest hourly dataset statistics.
+        </noscript>
       </section>
 
       <section class="hero-media-card" aria-label="AXIS system overview">
@@ -655,6 +733,7 @@
     </footer>
   </main>
 
+  <script src="realtime-stats.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

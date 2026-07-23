@@ -1,0 +1,121 @@
+name: Refresh real-time statistics
+
+on:
+  schedule:
+    # GitHub documents heavier queueing at the top of the hour.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: realtime-statistics-main
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.repository == 'AxisAIOrg/AXIS-V1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check database secret
+        env:
+          AXIS_STATS_DATABASE_URL: ${{ secrets.AXIS_STATS_DATABASE_URL }}
+        run: |
+          if [[ -z "${AXIS_STATS_DATABASE_URL}" ]]; then
+            echo "::error::Repository Secret AXIS_STATS_DATABASE_URL is not configured."
+            exit 1
+          fi
+
+      - name: Download the collector and current snapshot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          runtime_dir="${RUNNER_TEMP}/axis-realtime-stats"
+          mkdir -p "${runtime_dir}"
+
+          download_at_workflow_commit() {
+            local repository_path="$1"
+            local destination="$2"
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --retry 3 \
+              --retry-all-errors \
+              --proto '=https' \
+              --tlsv1.2 \
+              --header "Accept: application/vnd.github.raw+json" \
+              --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+              --header "X-GitHub-Api-Version: 2026-03-10" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/contents/${repository_path}?ref=${GITHUB_SHA}" \
+              --output "${destination}"
+          }
+
+          download_at_workflow_commit \
+            "scripts/collect_realtime_stats.py" \
+            "${runtime_dir}/collect_realtime_stats.py"
+          download_at_workflow_commit \
+            "scripts/publish_realtime_stats.py" \
+            "${runtime_dir}/publish_realtime_stats.py"
+          download_at_workflow_commit \
+            "data/realtime-stats.json" \
+            "${runtime_dir}/previous.json"
+
+      - name: Install the PostgreSQL client
+        run: |
+          runtime_dir="${RUNNER_TEMP}/axis-realtime-stats"
+          python3 -m venv "${runtime_dir}/venv"
+          "${runtime_dir}/venv/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --no-cache-dir \
+            --only-binary=:all: \
+            "psycopg[binary]==3.2.13"
+
+      - name: Download and verify the AWS RDS certificate authorities
+        run: |
+          runtime_dir="${RUNNER_TEMP}/axis-realtime-stats"
+          certificate_bundle="${runtime_dir}/aws-rds-global-bundle.pem"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --retry 3 \
+            --retry-all-errors \
+            --proto '=https' \
+            --tlsv1.2 \
+            "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem" \
+            --output "${certificate_bundle}"
+          # Pinned from the AWS global bundle on 2026-07-23. A changed bundle
+          # must be reviewed before this digest is deliberately updated.
+          echo "e5bb2084ccf45087bda1c9bffdea0eb15ee67f0b91646106e466714f9de3c7e3  ${certificate_bundle}" \
+            | sha256sum --check --strict
+
+      - name: Collect a read-only database snapshot
+        env:
+          AXIS_STATS_DATABASE_URL: ${{ secrets.AXIS_STATS_DATABASE_URL }}
+          AXIS_STATS_SSL_ROOT_CERT: ${{ runner.temp }}/axis-realtime-stats/aws-rds-global-bundle.pem
+        run: |
+          runtime_dir="${RUNNER_TEMP}/axis-realtime-stats"
+          "${runtime_dir}/venv/bin/python" "${runtime_dir}/collect_realtime_stats.py" \
+            --previous "${runtime_dir}/previous.json" \
+            --output "${runtime_dir}/realtime-stats.json"
+
+      - name: Publish the snapshot and rebuild GitHub Pages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          runtime_dir="${RUNNER_TEMP}/axis-realtime-stats"
+          "${runtime_dir}/venv/bin/python" "${runtime_dir}/publish_realtime_stats.py" \
+            --snapshot "${runtime_dir}/realtime-stats.json" \
+            --previous "${runtime_dir}/previous.json" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --branch "main" \
+            --path "data/realtime-stats.json" \
+            --expected-ref "${GITHUB_SHA}"

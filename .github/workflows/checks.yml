@@ -1,0 +1,86 @@
+name: Check real-time statistics
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/checks.yml"
+      - ".github/workflows/realtime-stats.yml"
+      - "data/realtime-stats.json"
+      - "index.html"
+      - "realtime-stats.js"
+      - "scripts/collect_realtime_stats.py"
+      - "scripts/publish_realtime_stats.py"
+      - "style.css"
+      - "tests/**"
+  pull_request:
+    paths:
+      - ".github/workflows/checks.yml"
+      - ".github/workflows/realtime-stats.yml"
+      - "data/realtime-stats.json"
+      - "index.html"
+      - "realtime-stats.js"
+      - "scripts/collect_realtime_stats.py"
+      - "scripts/publish_realtime_stats.py"
+      - "style.css"
+      - "tests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Download the test surface at this event commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test_root="${RUNNER_TEMP}/axis-realtime-stats-tests"
+          mkdir -p "${test_root}"
+
+          files=(
+            "data/realtime-stats.json"
+            "index.html"
+            "realtime-stats.js"
+            "scripts/collect_realtime_stats.py"
+            "scripts/publish_realtime_stats.py"
+            "tests/realtime-stats.test.js"
+            "tests/test_collect_realtime_stats.py"
+            "tests/test_homepage_integration.py"
+            "tests/test_publish_realtime_stats.py"
+          )
+
+          for repository_path in "${files[@]}"; do
+            destination="${test_root}/${repository_path}"
+            mkdir -p "$(dirname "${destination}")"
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --retry 3 \
+              --retry-all-errors \
+              --proto '=https' \
+              --tlsv1.2 \
+              --header "Accept: application/vnd.github.raw+json" \
+              --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+              --header "X-GitHub-Api-Version: 2026-03-10" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/contents/${repository_path}?ref=${GITHUB_SHA}" \
+              --output "${destination}"
+          done
+
+      - name: Run Python and browser-logic tests
+        run: |
+          test_root="${RUNNER_TEMP}/axis-realtime-stats-tests"
+          cd "${test_root}"
+          python3 -m unittest discover -s tests
+          python3 -m py_compile scripts/*.py tests/*.py
+          python3 -m json.tool data/realtime-stats.json >/dev/null
+          node --check realtime-stats.js
+          node --test tests/realtime-stats.test.js

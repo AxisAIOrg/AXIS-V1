@@ -30,12 +30,78 @@ http://localhost:8000
 
 No build step is required. This should work directly on GitHub Pages.
 
+## Real-time homepage statistics
+
+The homepage reads `data/realtime-stats.json` and displays:
+
+- verified trajectory count;
+- distinct tasks represented by those trajectories;
+- summed trajectory duration from `simulation_time_seconds`;
+- the observed growth per hour for each metric.
+
+`.github/workflows/realtime-stats.yml` runs at minute 17 of every hour (and can
+also be run manually). It queries PostgreSQL in a read-only transaction, writes
+only the sanitized aggregate JSON to `main` through the GitHub Contents API,
+and explicitly requests a GitHub Pages rebuild.
+
+The production path runs entirely on GitHub-hosted infrastructure. It does not
+use a developer laptop, a local SSH alias, a VPN session, or a self-hosted
+process.
+
+This repository intentionally keeps its existing branch-based Pages setup.
+Uploading the entire video-heavy site as a Pages artifact every hour would be
+unnecessarily expensive. A `GITHUB_TOKEN` commit does not trigger a Pages build
+on its own, so the explicit Pages build request in the workflow is required.
+
+Between snapshots, the browser distributes the latest measured increase across
+seeded pseudo-random event times for exactly one hour. Independent event times
+create visible bursts and quiet gaps while sorting keeps playback monotonic.
+The counters start at the previous totals, finish at the latest totals, and
+never extrapolate past them. The real-time statistics heading sits above the
+metric cards; trajectories span the first row, while tasks and trajectory
+duration share the second row.
+
+Changed digits use upward rolling reels with a short low-to-high stagger,
+inspired by live mileage counters. Visitors who prefer reduced motion receive
+the same values without the reel animation. Numeric growth comes exclusively
+from the sanitized database delta; no artificial catch-up amount is added.
+
+The current checked-in comparison starts from 1,530,275 trajectories, 1,816
+tasks, and 13,645 h 7 m. Hourly Actions refreshes replace this comparison with
+the next pair of database snapshots. Public totals are monotonic: metric arrows
+show upward growth or a steady value, and database corrections never decrease a
+published total.
+
+### Required secret
+
+Add the approved reference-repository connection URL as the repository Actions Secret
+`AXIS_STATS_DATABASE_URL`. The collector accepts the reference repository's
+`postgresql+psycopg://...` form and requires `sslmode=verify-full`. The workflow
+downloads the official AWS RDS global CA bundle, verifies its pinned SHA-256,
+passes it to PostgreSQL for certificate and hostname validation, and always
+executes the aggregate query inside a read-only transaction.
+
+After configuring the Secret, run **Actions → Refresh real-time statistics →
+Run workflow** once. The checked-in database baseline lets this first refresh
+produce the initial growth rates.
+
+### GitHub-hosted validation
+
+`.github/workflows/checks.yml` downloads only this feature's small test surface
+at the event commit and runs the Python and JavaScript tests on a GitHub-hosted
+runner. It does not clone the video-heavy repository, use database Secrets, or
+depend on a developer machine.
+
 ## Files
 
 ```text
 index.html                    Main page
 style.css                     Website styling
 script.js                     TOC highlight + BibTeX copy button
+realtime-stats.js              Hourly snapshot display + live estimation
+data/realtime-stats.json       Public sanitized snapshot
+scripts/                       Read-only collector + GitHub Pages publisher
+.github/workflows/             Hourly statistics automation
 .nojekyll                     Makes GitHub Pages serve static files directly
 assets/paper/                 PDF copy
 assets/placeholders/          SVG placeholders used by the page

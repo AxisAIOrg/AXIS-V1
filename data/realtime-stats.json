@@ -1,0 +1,23 @@
+{
+  "delta_since_previous": {
+    "tasks": 0,
+    "trajectories": 1656,
+    "trajectory_duration_seconds": 258058.584
+  },
+  "growth_per_hour": {
+    "tasks": 0.0,
+    "trajectories": 1448.849,
+    "trajectory_duration_seconds": 225777.66
+  },
+  "previous_sampled_at": "2026-07-23T20:14:22Z",
+  "sample_id": "11e86be9ed9c15f1",
+  "sample_interval_seconds": 4114.716,
+  "sampled_at": "2026-07-23T21:22:56Z",
+  "schema_version": 1,
+  "status": "ok",
+  "totals": {
+    "tasks": 1816,
+    "trajectories": 1531931,
+    "trajectory_duration_seconds": 49380463.584
+  }
+}
