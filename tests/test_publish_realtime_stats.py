@@ -5,8 +5,10 @@ from pathlib import Path
 
 from scripts.publish_realtime_stats import (
     PublishError,
+    commit_contains,
     validate_monotonic_against_previous,
     validate_public_snapshot,
+    wait_for_pages_build,
 )
 
 
@@ -258,6 +260,52 @@ class PublishRealtimeStatsTests(unittest.TestCase):
             current_path.write_text(json.dumps(current), encoding="utf-8")
             raw_current, _ = validate_public_snapshot(current_path)
             validate_monotonic_against_previous(raw_current, previous_path)
+
+    def test_pages_build_may_use_a_descendant_of_the_statistics_commit(self):
+        class FakeClient:
+            def __init__(self):
+                self.paths = []
+
+            def request(self, method, path):
+                self.paths.append((method, path))
+                if path == "/pages/builds/latest":
+                    return {
+                        "commit": "bbbbbbbbbbbbbbbb",
+                        "status": "built",
+                    }
+                if path == "/compare/aaaaaaaaaaaaaaaa...bbbbbbbbbbbbbbbb":
+                    return {"status": "ahead"}
+                raise AssertionError(path)
+
+        client = FakeClient()
+        wait_for_pages_build(
+            client,
+            "aaaaaaaaaaaaaaaa",
+            timeout_seconds=1,
+        )
+
+        self.assertIn(
+            (
+                "GET",
+                "/compare/aaaaaaaaaaaaaaaa...bbbbbbbbbbbbbbbb",
+            ),
+            client.paths,
+        )
+
+    def test_unrelated_pages_commit_does_not_satisfy_the_build(self):
+        class FakeClient:
+            def request(self, method, path):
+                self.method = method
+                self.path = path
+                return {"status": "diverged"}
+
+        self.assertFalse(
+            commit_contains(
+                FakeClient(),
+                "aaaaaaaaaaaaaaaa",
+                "bbbbbbbbbbbbbbbb",
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -483,15 +483,43 @@ def request_pages_build(client: GitHubClient) -> None:
     client.request("POST", "/pages/builds")
 
 
+def commit_contains(
+    client: GitHubClient,
+    required_commit: str,
+    candidate_commit: str,
+) -> bool:
+    if candidate_commit == required_commit:
+        return True
+    comparison = client.request(
+        "GET",
+        (
+            f"/compare/{quote(required_commit, safe='')}"
+            f"...{quote(candidate_commit, safe='')}"
+        ),
+    )
+    return comparison.get("status") in {"ahead", "identical"}
+
+
 def wait_for_pages_build(
     client: GitHubClient,
     commit_sha: str,
     timeout_seconds: int,
 ) -> None:
     deadline = time.monotonic() + timeout_seconds
+    inclusion_cache: dict[str, bool] = {}
     while time.monotonic() < deadline:
         latest = client.request("GET", "/pages/builds/latest")
-        if latest.get("commit") != commit_sha:
+        latest_commit = latest.get("commit")
+        if not isinstance(latest_commit, str):
+            time.sleep(5)
+            continue
+        if latest_commit not in inclusion_cache:
+            inclusion_cache[latest_commit] = commit_contains(
+                client,
+                commit_sha,
+                latest_commit,
+            )
+        if not inclusion_cache[latest_commit]:
             time.sleep(5)
             continue
         status = latest.get("status")
