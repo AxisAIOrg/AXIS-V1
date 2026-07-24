@@ -45,6 +45,7 @@ jobs:
           mkdir -p "${test_root}"
 
           files=(
+            ".github/workflows/realtime-stats.yml"
             "data/realtime-stats.json"
             "index.html"
             "realtime-stats.js"
