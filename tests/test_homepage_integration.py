@@ -81,13 +81,19 @@ class HomepageIntegrationTests(unittest.TestCase):
             homepage,
         )
         for entry in (
+            "@article{zhao2026axis,",
+            "journal = {arXiv preprint arXiv:2607.21588},",
+            "year    = {2026},",
+            "url     = {https://arxiv.org/abs/2607.21588}",
+        ):
+            self.assertIn(entry, homepage)
+        for obsolete_entry in (
             "@misc{zhao2026axisgrowablecommunitydrivendata,",
             "eprint={2607.21588},",
             "archivePrefix={arXiv},",
             "primaryClass={cs.RO},",
-            "url={https://arxiv.org/abs/2607.21588},",
         ):
-            self.assertIn(entry, homepage)
+            self.assertNotIn(obsolete_entry, homepage)
 
     def test_homepage_uses_requested_defaults_without_baseline_copy(self):
         homepage = Path("index.html").read_text(encoding="utf-8")
