@@ -69,6 +69,26 @@ class HomepageIntegrationTests(unittest.TestCase):
         self.assertEqual(homepage.count('class="stats-growth-arrow"'), 3)
         self.assertEqual(homepage.count('data-direction="potential"'), 3)
 
+    def test_paper_link_and_bibtex_use_the_arxiv_release(self):
+        homepage = Path("index.html").read_text(encoding="utf-8")
+
+        self.assertIn(
+            '<a href="https://arxiv.org/abs/2607.21588">[paper]</a>',
+            homepage,
+        )
+        self.assertNotIn(
+            'href="assets/paper/AXIS-V1_Release.pdf">[paper]</a>',
+            homepage,
+        )
+        for entry in (
+            "@misc{zhao2026axisgrowablecommunitydrivendata,",
+            "eprint={2607.21588},",
+            "archivePrefix={arXiv},",
+            "primaryClass={cs.RO},",
+            "url={https://arxiv.org/abs/2607.21588},",
+        ):
+            self.assertIn(entry, homepage)
+
     def test_homepage_uses_requested_defaults_without_baseline_copy(self):
         homepage = Path("index.html").read_text(encoding="utf-8")
         script = Path("realtime-stats.js").read_text(encoding="utf-8")
