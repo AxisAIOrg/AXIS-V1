@@ -22,8 +22,8 @@ API_VERSION = "2026-03-10"
 METRIC_KEYS = ("trajectories", "tasks", "trajectory_duration_seconds")
 TASKS_DAILY_KEYS = {
     "utc_date",
-    "baseline_utc_date",
     "baseline_total",
+    "display_utc_date",
     "increase",
     "basis",
 }
@@ -129,70 +129,46 @@ def validate_tasks_daily(
     if basis not in TASKS_DAILY_BASES:
         raise PublishError("The generated daily task basis is invalid.")
 
-    baseline_date_value = payload.get("baseline_utc_date")
     baseline_total_value = payload.get("baseline_total")
+    display_date_value = payload.get("display_utc_date")
     increase_value = payload.get("increase")
+    baseline_total = validate_nonnegative_integer(
+        baseline_total_value,
+        "daily task current-day baseline",
+    )
+    if baseline_total > total_tasks:
+        raise PublishError(
+            "The generated daily task current-day baseline exceeds the task total."
+        )
+    display_utc_date = parse_utc_date(
+        display_date_value,
+        "displayed daily task date",
+    )
+    if utc_date - display_utc_date != timedelta(days=1):
+        raise PublishError(
+            "The generated task increase does not describe the previous UTC date."
+        )
 
-    if basis == "estimated":
-        if baseline_date_value is not None or baseline_total_value is not None:
-            raise PublishError(
-                "Estimated daily task statistics cannot contain a baseline."
-            )
-        increase = validate_nonnegative_integer(
-            increase_value,
-            "estimated daily task increase",
-        )
-        if increase > total_tasks:
-            raise PublishError(
-                "The estimated daily task increase exceeds the task total."
-            )
-        baseline_utc_date = None
-        baseline_total = None
-    elif basis == "verified":
-        baseline_utc_date = parse_utc_date(
-            baseline_date_value,
-            "daily task baseline date",
-        )
-        if utc_date - baseline_utc_date != timedelta(days=1):
-            raise PublishError(
-                "The generated daily task baseline is not the previous UTC date."
-            )
-        baseline_total = validate_nonnegative_integer(
-            baseline_total_value,
-            "daily task baseline",
-        )
+    if basis in {"estimated", "verified"}:
         increase = validate_nonnegative_integer(
             increase_value,
             "daily task increase",
         )
-        if baseline_total > total_tasks or increase != total_tasks - baseline_total:
+        if increase > total_tasks:
             raise PublishError(
-                "The generated daily task increase does not match its baseline."
+                "The daily task increase exceeds the task total."
             )
     else:
-        if any(
-            value is not None
-            for value in (
-                baseline_date_value,
-                baseline_total_value,
-                increase_value,
-            )
-        ):
+        if increase_value is not None:
             raise PublishError(
-                "Unavailable daily task statistics cannot contain values."
+                "Unavailable daily task statistics cannot contain an increase."
             )
-        baseline_utc_date = None
-        baseline_total = None
         increase = None
 
     return {
         "utc_date": utc_date.isoformat(),
-        "baseline_utc_date": (
-            baseline_utc_date.isoformat()
-            if isinstance(baseline_utc_date, date)
-            else None
-        ),
         "baseline_total": baseline_total,
+        "display_utc_date": display_utc_date.isoformat(),
         "increase": increase,
         "basis": basis,
     }
@@ -407,44 +383,45 @@ def validate_monotonic_against_previous(
     day_gap = new_date - previous_date
 
     if day_gap == timedelta(0):
-        if new_daily["basis"] != previous_daily["basis"]:
+        if new_daily != previous_daily:
             raise PublishError(
-                "The daily task basis changed within the same UTC date."
+                "Completed daily task statistics changed within the same UTC date."
             )
-        if new_daily["basis"] in {"estimated", "unavailable"}:
-            if new_daily != previous_daily:
-                raise PublishError(
-                    "Daily task metadata changed within the same UTC date."
-                )
-        else:
-            if (
-                new_daily["baseline_utc_date"]
-                != previous_daily["baseline_utc_date"]
-                or new_daily["baseline_total"]
-                != previous_daily["baseline_total"]
-                or new_daily["increase"] < previous_daily["increase"]
-            ):
-                raise PublishError(
-                    "The verified daily task baseline changed unexpectedly."
-                )
     elif day_gap == timedelta(days=1):
         if expected_interval <= MAX_TASK_DAILY_BASELINE_AGE.total_seconds():
+            expected_completed_increase = (
+                previous_payload["totals"]["tasks"]
+                - previous_daily["baseline_total"]
+            )
             if (
                 new_daily["basis"] != "verified"
-                or new_daily["baseline_utc_date"] != previous_date.isoformat()
                 or new_daily["baseline_total"] != previous_payload["totals"]["tasks"]
+                or new_daily["display_utc_date"] != previous_date.isoformat()
+                or new_daily["increase"] != expected_completed_increase
             ):
                 raise PublishError(
-                    "The new UTC day does not use the previous task total as its baseline."
+                    "The new UTC day does not publish the completed task-day difference."
                 )
-        elif new_daily["basis"] != "unavailable":
+        elif (
+            new_daily["basis"] != "unavailable"
+            or new_daily["baseline_total"] != new_payload["totals"]["tasks"]
+            or new_daily["display_utc_date"] != (
+                new_date - timedelta(days=1)
+            ).isoformat()
+        ):
             raise PublishError(
-                "A stale task baseline cannot be published as a daily increase."
+                "A stale task baseline must restart as unavailable."
             )
     elif day_gap > timedelta(days=1):
-        if new_daily["basis"] != "unavailable":
+        if (
+            new_daily["basis"] != "unavailable"
+            or new_daily["baseline_total"] != new_payload["totals"]["tasks"]
+            or new_daily["display_utc_date"] != (
+                new_date - timedelta(days=1)
+            ).isoformat()
+        ):
             raise PublishError(
-                "A multi-day task gap cannot be published as a daily increase."
+                "A multi-day task gap must restart as unavailable."
             )
     else:
         raise PublishError("The daily task date moved backwards.")

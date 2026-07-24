@@ -17,9 +17,9 @@
   "status": "ok",
   "tasks_daily": {
     "baseline_total": 1816,
-    "baseline_utc_date": "2026-07-23",
-    "basis": "verified",
-    "increase": 6,
+    "basis": "estimated",
+    "display_utc_date": "2026-07-23",
+    "increase": 9,
     "utc_date": "2026-07-24"
   },
   "totals": {

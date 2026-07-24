@@ -2,8 +2,9 @@ name: Refresh real-time statistics
 
 on:
   schedule:
-    # GitHub documents heavier queueing at the top of the hour.
-    - cron: "17 * * * *"
+    # Redundant scheduler opportunities reduce gaps when GitHub delays a cron
+    # event. A freshness gate below still performs roughly one DB read per hour.
+    - cron: "17,37,57 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -30,7 +31,8 @@ jobs:
             exit 1
           fi
 
-      - name: Download the collector and current snapshot
+      - name: Prepare the collector and current snapshot
+        id: prepare
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -38,9 +40,10 @@ jobs:
           runtime_dir="${RUNNER_TEMP}/axis-realtime-stats"
           mkdir -p "${runtime_dir}"
 
-          download_at_workflow_commit() {
+          download_at_ref() {
             local repository_path="$1"
             local destination="$2"
+            local ref="$3"
             curl \
               --fail \
               --silent \
@@ -53,21 +56,56 @@ jobs:
               --header "Accept: application/vnd.github.raw+json" \
               --header "Authorization: Bearer ${GITHUB_TOKEN}" \
               --header "X-GitHub-Api-Version: 2026-03-10" \
-              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/contents/${repository_path}?ref=${GITHUB_SHA}" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/contents/${repository_path}?ref=${ref}" \
               --output "${destination}"
           }
 
-          download_at_workflow_commit \
+          current_ref="$(
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --retry 3 \
+              --retry-all-errors \
+              --proto '=https' \
+              --tlsv1.2 \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+              --header "X-GitHub-Api-Version: 2026-03-10" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/git/ref/heads/main" \
+              | jq --exit-status --raw-output '.object.sha'
+          )"
+
+          download_at_ref \
             "scripts/collect_realtime_stats.py" \
-            "${runtime_dir}/collect_realtime_stats.py"
-          download_at_workflow_commit \
+            "${runtime_dir}/collect_realtime_stats.py" \
+            "${GITHUB_SHA}"
+          download_at_ref \
             "scripts/publish_realtime_stats.py" \
-            "${runtime_dir}/publish_realtime_stats.py"
-          download_at_workflow_commit \
+            "${runtime_dir}/publish_realtime_stats.py" \
+            "${GITHUB_SHA}"
+          download_at_ref \
             "data/realtime-stats.json" \
-            "${runtime_dir}/previous.json"
+            "${runtime_dir}/previous.json" \
+            "${current_ref}"
+
+          should_refresh="true"
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
+            sampled_at="$(jq --exit-status --raw-output '.sampled_at' "${runtime_dir}/previous.json")"
+            sampled_epoch="$(date --utc --date "${sampled_at}" +%s)"
+            current_epoch="$(date --utc +%s)"
+            snapshot_age_seconds="$((current_epoch - sampled_epoch))"
+            if (( snapshot_age_seconds >= 0 && snapshot_age_seconds < 3000 )); then
+              should_refresh="false"
+              echo "Latest database snapshot is still fresh; skipping this backup slot."
+            fi
+          fi
+          echo "should_refresh=${should_refresh}" >> "${GITHUB_OUTPUT}"
+          echo "expected_ref=${current_ref}" >> "${GITHUB_OUTPUT}"
 
       - name: Install the PostgreSQL client
+        if: steps.prepare.outputs.should_refresh == 'true'
         run: |
           runtime_dir="${RUNNER_TEMP}/axis-realtime-stats"
           python3 -m venv "${runtime_dir}/venv"
@@ -78,6 +116,7 @@ jobs:
             "psycopg[binary]==3.2.13"
 
       - name: Download and verify the AWS RDS certificate authorities
+        if: steps.prepare.outputs.should_refresh == 'true'
         run: |
           runtime_dir="${RUNNER_TEMP}/axis-realtime-stats"
           certificate_bundle="${runtime_dir}/aws-rds-global-bundle.pem"
@@ -98,6 +137,7 @@ jobs:
             | sha256sum --check --strict
 
       - name: Collect a read-only database snapshot
+        if: steps.prepare.outputs.should_refresh == 'true'
         env:
           AXIS_STATS_DATABASE_URL: ${{ secrets.AXIS_STATS_DATABASE_URL }}
           AXIS_STATS_SSL_ROOT_CERT: ${{ runner.temp }}/axis-realtime-stats/aws-rds-global-bundle.pem
@@ -108,6 +148,7 @@ jobs:
             --output "${runtime_dir}/realtime-stats.json"
 
       - name: Publish the snapshot and rebuild GitHub Pages
+        if: steps.prepare.outputs.should_refresh == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -118,4 +159,4 @@ jobs:
             --repository "${GITHUB_REPOSITORY}" \
             --branch "main" \
             --path "data/realtime-stats.json" \
-            --expected-ref "${GITHUB_SHA}"
+            --expected-ref "${{ steps.prepare.outputs.expected_ref }}"

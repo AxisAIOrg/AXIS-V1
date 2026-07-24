@@ -17,6 +17,7 @@
   const FETCH_TIMEOUT_MS = 15 * 1000;
   const MAX_SCHEDULE_STEPS = 720;
   const RENDER_INTERVAL_MS = 250;
+  const REDUCED_MOTION_RENDER_INTERVAL_MS = 1000;
   const FALLBACK_TOTALS = {
     trajectories: 1530275,
     tasks: 1816,
@@ -80,67 +81,83 @@
   }
 
   function parseTasksDaily(payload, totalTasks, sampledAtMs) {
-    const expectedKeys = [
+    const completedDayKeys = [
+      "baseline_total",
+      "basis",
+      "display_utc_date",
+      "increase",
+      "utc_date"
+    ];
+    const legacyKeys = [
       "baseline_total",
       "baseline_utc_date",
       "basis",
       "increase",
       "utc_date"
     ];
+    const actualKeys = payload && typeof payload === "object" && !Array.isArray(payload)
+      ? Object.keys(payload).sort().join(",")
+      : "";
+    if (actualKeys === legacyKeys.join(",")) {
+      const sampledUtcDate = new Date(sampledAtMs).toISOString().slice(0, 10);
+      const increase = Number.isInteger(payload.increase) && payload.increase > 0
+        ? payload.increase
+        : null;
+      return {
+        utcDate: sampledUtcDate,
+        displayUtcDate: payload.utc_date,
+        baselineTotal: payload.baseline_total,
+        increase,
+        basis: increase === null ? "unavailable" : payload.basis
+      };
+    }
     if (
       !payload
       || typeof payload !== "object"
       || Array.isArray(payload)
-      || Object.keys(payload).sort().join(",") !== expectedKeys.join(",")
+      || actualKeys !== completedDayKeys.join(",")
     ) {
       throw new Error("The statistics snapshot has invalid daily task statistics.");
     }
 
     const utcDateMs = parseUtcDate(payload.utc_date, "daily task date");
+    const displayUtcDateMs = parseUtcDate(
+      payload.display_utc_date,
+      "displayed daily task date"
+    );
     const sampledUtcDate = new Date(sampledAtMs).toISOString().slice(0, 10);
     if (payload.utc_date !== sampledUtcDate) {
       throw new Error("The daily task date does not match sampled_at.");
     }
+    if (utcDateMs - displayUtcDateMs !== 24 * HOUR_MS) {
+      throw new Error("The task increase must describe the previous UTC date.");
+    }
     if (!["estimated", "verified", "unavailable"].includes(payload.basis)) {
       throw new Error("The statistics snapshot has an invalid daily task basis.");
     }
+    if (
+      !Number.isInteger(payload.baseline_total)
+      || payload.baseline_total < 0
+      || payload.baseline_total > totalTasks
+    ) {
+      throw new Error("The daily task current-day baseline is invalid.");
+    }
 
-    if (payload.basis === "estimated") {
+    if (payload.basis === "estimated" || payload.basis === "verified") {
       if (
-        payload.baseline_utc_date !== null
-        || payload.baseline_total !== null
-        || !Number.isInteger(payload.increase)
+        !Number.isInteger(payload.increase)
         || payload.increase < 0
         || payload.increase > totalTasks
       ) {
-        throw new Error("The estimated daily task statistics are invalid.");
+        throw new Error("The daily task statistics are invalid.");
       }
-    } else if (payload.basis === "verified") {
-      const baselineDateMs = parseUtcDate(
-        payload.baseline_utc_date,
-        "daily task baseline date"
-      );
-      if (
-        utcDateMs - baselineDateMs !== 24 * HOUR_MS
-        || !Number.isInteger(payload.baseline_total)
-        || payload.baseline_total < 0
-        || payload.baseline_total > totalTasks
-        || !Number.isInteger(payload.increase)
-        || payload.increase !== totalTasks - payload.baseline_total
-      ) {
-        throw new Error("The verified daily task statistics are invalid.");
-      }
-    } else if (
-      payload.baseline_utc_date !== null
-      || payload.baseline_total !== null
-      || payload.increase !== null
-    ) {
-      throw new Error("Unavailable daily task statistics cannot contain values.");
+    } else if (payload.increase !== null) {
+      throw new Error("Unavailable daily task statistics cannot contain an increase.");
     }
 
     return {
       utcDate: payload.utc_date,
-      baselineUtcDate: payload.baseline_utc_date,
+      displayUtcDate: payload.display_utc_date,
       baselineTotal: payload.baseline_total,
       increase: payload.increase,
       basis: payload.basis
@@ -217,7 +234,7 @@
     const tasksDaily = payload.tasks_daily === undefined
       ? {
         utcDate: new Date(sampledAtMs).toISOString().slice(0, 10),
-        baselineUtcDate: null,
+        displayUtcDate: null,
         baselineTotal: null,
         increase: null,
         basis: "unavailable"
@@ -736,9 +753,10 @@
 
     loadSnapshot();
     const pollTimer = browser.setInterval(loadSnapshot, POLL_INTERVAL_MS);
-    const renderTimer = reducedMotion
-      ? null
-      : browser.setInterval(render, RENDER_INTERVAL_MS);
+    const renderTimer = browser.setInterval(
+      render,
+      reducedMotion ? REDUCED_MOTION_RENDER_INTERVAL_MS : RENDER_INTERVAL_MS
+    );
 
     documentObject.addEventListener("visibilitychange", () => {
       if (documentObject.visibilityState === "visible") render();
@@ -748,7 +766,7 @@
       if (event.persisted) return;
       if (activeController) activeController.abort();
       browser.clearInterval(pollTimer);
-      if (renderTimer !== null) browser.clearInterval(renderTimer);
+      browser.clearInterval(renderTimer);
     }, { once: true });
   }
 
@@ -757,6 +775,7 @@
     STALE_AFTER_MS,
     FETCH_TIMEOUT_MS,
     RENDER_INTERVAL_MS,
+    REDUCED_MOTION_RENDER_INTERVAL_MS,
     buildGrowthSchedule,
     distributedGrowth,
     formatDuration,

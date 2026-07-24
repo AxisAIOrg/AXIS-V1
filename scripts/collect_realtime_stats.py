@@ -22,8 +22,8 @@ SSL_ROOT_CERT_ENV_NAME = "AXIS_STATS_SSL_ROOT_CERT"
 METRIC_KEYS = ("trajectories", "tasks", "trajectory_duration_seconds")
 TASKS_DAILY_KEYS = {
     "utc_date",
-    "baseline_utc_date",
     "baseline_total",
+    "display_utc_date",
     "increase",
     "basis",
 }
@@ -175,67 +175,43 @@ def validate_tasks_daily(
     if basis not in TASKS_DAILY_BASES:
         raise StatsCollectionError("The daily task basis is invalid.")
 
-    baseline_date_value = payload.get("baseline_utc_date")
     baseline_total_value = payload.get("baseline_total")
+    display_date_value = payload.get("display_utc_date")
     increase_value = payload.get("increase")
+    baseline_total = validate_nonnegative_integer(
+        "daily task current-day baseline",
+        baseline_total_value,
+    )
+    if baseline_total > total_tasks:
+        raise StatsCollectionError(
+            "The daily task current-day baseline exceeds the task total."
+        )
+    display_utc_date = parse_utc_date(display_date_value)
+    if utc_date - display_utc_date != timedelta(days=1):
+        raise StatsCollectionError(
+            "The displayed task increase must describe the previous UTC date."
+        )
 
-    if basis == "estimated":
-        if baseline_date_value is not None or baseline_total_value is not None:
-            raise StatsCollectionError(
-                "Estimated daily task statistics cannot contain a baseline."
-            )
-        increase = validate_nonnegative_integer(
-            "estimated daily task increase",
-            increase_value,
-        )
-        if increase > total_tasks:
-            raise StatsCollectionError(
-                "The estimated daily task increase exceeds the task total."
-            )
-        baseline_utc_date = None
-        baseline_total = None
-    elif basis == "verified":
-        baseline_utc_date = parse_utc_date(baseline_date_value)
-        if utc_date - baseline_utc_date != timedelta(days=1):
-            raise StatsCollectionError(
-                "The verified daily task baseline must be the previous UTC date."
-            )
-        baseline_total = validate_nonnegative_integer(
-            "daily task baseline",
-            baseline_total_value,
-        )
+    if basis in {"estimated", "verified"}:
         increase = validate_nonnegative_integer(
             "daily task increase",
             increase_value,
         )
-        if baseline_total > total_tasks or increase != total_tasks - baseline_total:
+        if increase > total_tasks:
             raise StatsCollectionError(
-                "The verified daily task increase does not match its baseline."
+                "The daily task increase exceeds the task total."
             )
     else:
-        if any(
-            value is not None
-            for value in (
-                baseline_date_value,
-                baseline_total_value,
-                increase_value,
-            )
-        ):
+        if increase_value is not None:
             raise StatsCollectionError(
-                "Unavailable daily task statistics cannot contain values."
+                "Unavailable daily task statistics cannot contain an increase."
             )
-        baseline_utc_date = None
-        baseline_total = None
         increase = None
 
     return {
         "utc_date": utc_date.isoformat(),
-        "baseline_utc_date": (
-            baseline_utc_date.isoformat()
-            if isinstance(baseline_utc_date, date)
-            else None
-        ),
         "baseline_total": baseline_total,
+        "display_utc_date": display_utc_date.isoformat(),
         "increase": increase,
         "basis": basis,
     }
@@ -287,14 +263,16 @@ def build_tasks_daily(
     # calculating intervals so publisher validation uses the same clock values.
     sampled_at_utc = sampled_at.astimezone(timezone.utc).replace(microsecond=0)
     utc_date = sampled_at_utc.date()
+    display_utc_date = utc_date - timedelta(days=1)
 
     if previous is None:
+        baseline_total = total_tasks
         if initial_estimate is None:
             return validate_tasks_daily(
                 {
                     "utc_date": utc_date.isoformat(),
-                    "baseline_utc_date": None,
-                    "baseline_total": None,
+                    "baseline_total": baseline_total,
+                    "display_utc_date": display_utc_date.isoformat(),
                     "increase": None,
                     "basis": "unavailable",
                 },
@@ -308,8 +286,8 @@ def build_tasks_daily(
         return validate_tasks_daily(
             {
                 "utc_date": utc_date.isoformat(),
-                "baseline_utc_date": None,
-                "baseline_total": None,
+                "baseline_total": baseline_total,
+                "display_utc_date": display_utc_date.isoformat(),
                 "increase": min(estimate, total_tasks),
                 "basis": "estimated",
             },
@@ -331,29 +309,24 @@ def build_tasks_daily(
     day_gap = utc_date - previous_date
 
     if day_gap == timedelta(0):
-        if previous_daily["basis"] == "estimated":
-            return previous_daily
-        if previous_daily["basis"] == "unavailable":
-            return previous_daily
-        return validate_tasks_daily(
-            {
-                **previous_daily,
-                "increase": total_tasks - int(previous_daily["baseline_total"]),
-            },
-            total_tasks,
-            utc_date,
-        )
+        # The displayed value describes the last complete UTC day, so it stays
+        # fixed throughout the current day even if Tasks changes later.
+        return previous_daily
 
     if (
         day_gap == timedelta(days=1)
         and sampled_at_utc - previous_time <= MAX_TASK_DAILY_BASELINE_AGE
     ):
+        completed_increase = (
+            int(previous_totals["tasks"])
+            - int(previous_daily["baseline_total"])
+        )
         return validate_tasks_daily(
             {
                 "utc_date": utc_date.isoformat(),
-                "baseline_utc_date": previous_date.isoformat(),
                 "baseline_total": int(previous_totals["tasks"]),
-                "increase": total_tasks - int(previous_totals["tasks"]),
+                "display_utc_date": previous_date.isoformat(),
+                "increase": completed_increase,
                 "basis": "verified",
             },
             total_tasks,
@@ -364,8 +337,8 @@ def build_tasks_daily(
         return validate_tasks_daily(
             {
                 "utc_date": utc_date.isoformat(),
-                "baseline_utc_date": None,
-                "baseline_total": None,
+                "baseline_total": total_tasks,
+                "display_utc_date": display_utc_date.isoformat(),
                 "increase": None,
                 "basis": "unavailable",
             },

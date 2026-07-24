@@ -3,7 +3,7 @@ import sys
 import tempfile
 import types
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,11 +19,13 @@ from scripts.collect_realtime_stats import (
 )
 
 
-def estimated_tasks_daily(utc_date, increase=9):
+def estimated_tasks_daily(utc_date, increase=9, baseline_total=100):
     return {
         "utc_date": utc_date,
-        "baseline_utc_date": None,
-        "baseline_total": None,
+        "baseline_total": baseline_total,
+        "display_utc_date": (
+            date.fromisoformat(utc_date) - timedelta(days=1)
+        ).isoformat(),
         "increase": increase,
         "basis": "estimated",
     }
@@ -153,7 +155,7 @@ class CollectRealtimeStatsTests(unittest.TestCase):
         self.assertTrue(all(value is None for value in snapshot["growth_per_hour"].values()))
         self.assertEqual(
             snapshot["tasks_daily"],
-            estimated_tasks_daily("2026-07-23"),
+            estimated_tasks_daily("2026-07-23", baseline_total=1_006),
         )
 
     def test_growth_rate_uses_actual_sample_interval(self):
@@ -252,9 +254,11 @@ class CollectRealtimeStatsTests(unittest.TestCase):
         )
 
         self.assertEqual(daily["basis"], "unavailable")
+        self.assertEqual(daily["baseline_total"], 100)
+        self.assertEqual(daily["display_utc_date"], "2026-07-22")
         self.assertIsNone(daily["increase"])
 
-    def test_next_utc_day_uses_previous_task_total_as_verified_baseline(self):
+    def test_next_utc_day_publishes_the_completed_previous_day(self):
         previous_time = datetime(2026, 7, 23, 23, 17, tzinfo=timezone.utc)
         daily = build_tasks_daily(
             104,
@@ -266,7 +270,11 @@ class CollectRealtimeStatsTests(unittest.TestCase):
                     "tasks": 100,
                     "trajectory_duration_seconds": 50_000,
                 },
-                "tasks_daily": estimated_tasks_daily("2026-07-23"),
+                "tasks_daily": estimated_tasks_daily(
+                    "2026-07-23",
+                    increase=4,
+                    baseline_total=95,
+                ),
             },
         )
 
@@ -274,15 +282,22 @@ class CollectRealtimeStatsTests(unittest.TestCase):
             daily,
             {
                 "utc_date": "2026-07-24",
-                "baseline_utc_date": "2026-07-23",
                 "baseline_total": 100,
-                "increase": 4,
+                "display_utc_date": "2026-07-23",
+                "increase": 5,
                 "basis": "verified",
             },
         )
 
-    def test_verified_task_growth_accumulates_without_moving_daily_baseline(self):
+    def test_completed_task_growth_stays_fixed_during_the_current_day(self):
         previous_time = datetime(2026, 7, 24, 0, 17, tzinfo=timezone.utc)
+        completed_daily = {
+            "utc_date": "2026-07-24",
+            "baseline_total": 95,
+            "display_utc_date": "2026-07-23",
+            "increase": 5,
+            "basis": "verified",
+        }
         daily = build_tasks_daily(
             103,
             previous_time + timedelta(hours=4),
@@ -293,19 +308,11 @@ class CollectRealtimeStatsTests(unittest.TestCase):
                     "tasks": 100,
                     "trajectory_duration_seconds": 50_000,
                 },
-                "tasks_daily": {
-                    "utc_date": "2026-07-24",
-                    "baseline_utc_date": "2026-07-23",
-                    "baseline_total": 95,
-                    "increase": 5,
-                    "basis": "verified",
-                },
+                "tasks_daily": completed_daily,
             },
         )
 
-        self.assertEqual(daily["baseline_total"], 95)
-        self.assertEqual(daily["increase"], 8)
-        self.assertEqual(daily["basis"], "verified")
+        self.assertEqual(daily, completed_daily)
 
     def test_multi_day_gap_hides_daily_task_growth(self):
         previous_time = datetime(2026, 7, 21, 23, 17, tzinfo=timezone.utc)
@@ -327,8 +334,8 @@ class CollectRealtimeStatsTests(unittest.TestCase):
             daily,
             {
                 "utc_date": "2026-07-23",
-                "baseline_utc_date": None,
-                "baseline_total": None,
+                "baseline_total": 105,
+                "display_utc_date": "2026-07-22",
                 "increase": None,
                 "basis": "unavailable",
             },
@@ -351,7 +358,42 @@ class CollectRealtimeStatsTests(unittest.TestCase):
         )
 
         self.assertEqual(daily["basis"], "unavailable")
+        self.assertEqual(daily["baseline_total"], 120)
+        self.assertEqual(daily["display_utc_date"], "2026-07-23")
         self.assertIsNone(daily["increase"])
+
+    def test_next_complete_day_recovers_from_an_unavailable_display(self):
+        previous_time = datetime(2026, 7, 24, 23, 17, tzinfo=timezone.utc)
+        daily = build_tasks_daily(
+            110,
+            previous_time + timedelta(hours=1),
+            {
+                "sampled_at": previous_time,
+                "totals": {
+                    "trajectories": 1_000,
+                    "tasks": 108,
+                    "trajectory_duration_seconds": 50_000,
+                },
+                "tasks_daily": {
+                    "utc_date": "2026-07-24",
+                    "baseline_total": 100,
+                    "display_utc_date": "2026-07-23",
+                    "increase": None,
+                    "basis": "unavailable",
+                },
+            },
+        )
+
+        self.assertEqual(
+            daily,
+            {
+                "utc_date": "2026-07-25",
+                "baseline_total": 108,
+                "display_utc_date": "2026-07-24",
+                "increase": 8,
+                "basis": "verified",
+            },
+        )
 
     def test_database_correction_never_decreases_public_totals(self):
         previous_time = datetime(2026, 7, 23, 11, 0, tzinfo=timezone.utc)

@@ -35,8 +35,8 @@ def valid_snapshot():
         },
         "tasks_daily": {
             "utc_date": "2026-07-23",
-            "baseline_utc_date": "2026-07-22",
             "baseline_total": 9,
+            "display_utc_date": "2026-07-22",
             "increase": 1,
             "basis": "verified",
         },
@@ -70,8 +70,8 @@ class PublishRealtimeStatsTests(unittest.TestCase):
         }
         payload["tasks_daily"] = {
             "utc_date": "2026-07-23",
-            "baseline_utc_date": None,
-            "baseline_total": None,
+            "baseline_total": 10,
+            "display_utc_date": "2026-07-22",
             "increase": 1,
             "basis": "estimated",
         }
@@ -118,9 +118,9 @@ class PublishRealtimeStatsTests(unittest.TestCase):
             with self.assertRaises(PublishError):
                 validate_public_snapshot(self.write_payload(directory, payload))
 
-    def test_rejects_daily_task_increase_that_does_not_match_baseline(self):
+    def test_rejects_daily_task_display_that_is_not_the_previous_date(self):
         payload = valid_snapshot()
-        payload["tasks_daily"]["increase"] = 2
+        payload["tasks_daily"]["display_utc_date"] = "2026-07-20"
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(PublishError):
                 validate_public_snapshot(self.write_payload(directory, payload))
@@ -152,9 +152,9 @@ class PublishRealtimeStatsTests(unittest.TestCase):
         }
         previous["tasks_daily"] = {
             "utc_date": "2026-07-23",
-            "baseline_utc_date": "2026-07-22",
             "baseline_total": 9,
-            "increase": 0,
+            "display_utc_date": "2026-07-22",
+            "increase": 1,
             "basis": "verified",
         }
         with tempfile.TemporaryDirectory() as directory:
@@ -169,6 +169,13 @@ class PublishRealtimeStatsTests(unittest.TestCase):
         previous["sample_id"] = "aaaaaaaaaaaaaaaa"
         previous["sampled_at"] = "2026-07-23T23:00:00Z"
         previous["previous_sampled_at"] = "2026-07-23T22:00:00Z"
+        previous["tasks_daily"] = {
+            "utc_date": "2026-07-23",
+            "baseline_total": 8,
+            "display_utc_date": "2026-07-22",
+            "increase": 1,
+            "basis": "estimated",
+        }
 
         current = valid_snapshot()
         current["sample_id"] = "bbbbbbbbbbbbbbbb"
@@ -186,8 +193,8 @@ class PublishRealtimeStatsTests(unittest.TestCase):
         }
         current["tasks_daily"] = {
             "utc_date": "2026-07-24",
-            "baseline_utc_date": "2026-07-23",
             "baseline_total": 10,
+            "display_utc_date": "2026-07-23",
             "increase": 2,
             "basis": "verified",
         }
@@ -227,8 +234,8 @@ class PublishRealtimeStatsTests(unittest.TestCase):
         }
         current["tasks_daily"] = {
             "utc_date": "2026-07-24",
-            "baseline_utc_date": "2026-07-23",
             "baseline_total": 10,
+            "display_utc_date": "2026-07-23",
             "increase": 2,
             "basis": "verified",
         }
@@ -243,8 +250,8 @@ class PublishRealtimeStatsTests(unittest.TestCase):
 
             current["tasks_daily"] = {
                 "utc_date": "2026-07-24",
-                "baseline_utc_date": None,
-                "baseline_total": None,
+                "baseline_total": 12,
+                "display_utc_date": "2026-07-23",
                 "increase": None,
                 "basis": "unavailable",
             }

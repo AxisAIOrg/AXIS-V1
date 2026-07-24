@@ -45,7 +45,7 @@ class HomepageIntegrationTests(unittest.TestCase):
         self.assertTrue(expected_ids.issubset(parser.ids))
         self.assertEqual(parser.stats_url, "./data/realtime-stats.json")
         self.assertIn(
-            "realtime-stats.js?v=20260723-daily-tasks",
+            "realtime-stats.js?v=20260724-complete-day-tasks",
             parser.scripts,
         )
 
@@ -82,7 +82,7 @@ class HomepageIntegrationTests(unittest.TestCase):
         self.assertNotIn(">Baseline<", homepage)
         self.assertNotIn('"Baseline"', script)
         self.assertIn(
-            "Data is verified once every hour. Task growth is calculated daily.",
+            "Data is verified every hour. Task growth uses the latest complete UTC day.",
             homepage,
         )
         self.assertIn("formatTasksDailyRate", script)
@@ -114,6 +114,16 @@ class HomepageIntegrationTests(unittest.TestCase):
             )
         self.assertIn("stats-digit-track is-entering", script)
         self.assertIn("@keyframes stats-digit-enter", stylesheet)
+
+    def test_hourly_workflow_has_backup_slots_and_a_freshness_gate(self):
+        workflow = Path(
+            ".github/workflows/realtime-stats.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('cron: "17,37,57 * * * *"', workflow)
+        self.assertIn("snapshot_age_seconds < 3000", workflow)
+        self.assertIn("should_refresh=${should_refresh}", workflow)
+        self.assertIn("expected_ref=${current_ref}", workflow)
 
     def test_checked_in_snapshot_is_safe_public_data(self):
         snapshot_path = Path("data/realtime-stats.json")
@@ -153,8 +163,8 @@ class HomepageIntegrationTests(unittest.TestCase):
             payload["tasks_daily"],
             {
                 "utc_date": None,
-                "baseline_utc_date": None,
                 "baseline_total": None,
+                "display_utc_date": None,
                 "increase": None,
                 "basis": "unavailable",
             },

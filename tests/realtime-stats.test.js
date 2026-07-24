@@ -26,7 +26,7 @@ function snapshot(overrides = {}) {
     },
     tasksDaily: {
       utcDate: "2026-07-23",
-      baselineUtcDate: "2026-07-22",
+      displayUtcDate: "2026-07-22",
       baselineTotal: 99,
       increase: 1,
       basis: "verified"
@@ -68,7 +68,7 @@ test("accepts the previous snapshot shape during a cached deployment rollover", 
 
   assert.deepEqual(parsed.tasksDaily, {
     utcDate: "2026-07-23",
-    baselineUtcDate: null,
+    displayUtcDate: null,
     baselineTotal: null,
     increase: null,
     basis: "unavailable"
@@ -98,8 +98,8 @@ test("rejects unsafe totals", () => {
     },
     tasks_daily: {
       utc_date: "2026-07-23",
-      baseline_utc_date: "2026-07-22",
       baseline_total: 9,
+      display_utc_date: "2026-07-22",
       increase: 1,
       basis: "verified"
     }
@@ -185,11 +185,11 @@ test("checked-in database delta plays from the previous totals to the latest tot
 
 test("tasks use the measured total and a daily growth label", () => {
   const value = stats.parseSnapshot(checkedInPayload);
-  assert.equal(value.totals.tasks, 1816);
+  assert.equal(value.totals.tasks, 1822);
   assert.deepEqual(value.tasksDaily, {
-    utcDate: "2026-07-23",
-    baselineUtcDate: null,
-    baselineTotal: null,
+    utcDate: "2026-07-24",
+    displayUtcDate: "2026-07-23",
+    baselineTotal: 1816,
     increase: 9,
     basis: "estimated"
   });
@@ -200,8 +200,6 @@ test("tasks use the measured total and a daily growth label", () => {
   assert.equal(
     stats.formatTasksDailyRate({
       ...value.tasksDaily,
-      baselineUtcDate: "2026-07-23",
-      baselineTotal: 1816,
       increase: 0,
       basis: "verified"
     }),
@@ -210,13 +208,18 @@ test("tasks use the measured total and a daily growth label", () => {
   assert.equal(
     stats.formatTasksDailyRate({
       utcDate: "2026-07-25",
-      baselineUtcDate: null,
-      baselineTotal: null,
+      displayUtcDate: "2026-07-24",
+      baselineTotal: 1822,
       increase: null,
       basis: "unavailable"
     }),
     ""
   );
+});
+
+test("reduced-motion rendering still receives live update ticks", () => {
+  assert.equal(stats.REDUCED_MOTION_RENDER_INTERVAL_MS, 1000);
+  assert.ok(stats.REDUCED_MOTION_RENDER_INTERVAL_MS < stats.HOUR_MS);
 });
 
 test("negative input never decreases or renders as negative growth", () => {

@@ -38,12 +38,15 @@ The homepage reads `data/realtime-stats.json` and displays:
 - distinct tasks represented by those trajectories;
 - summed trajectory duration from `simulation_time_seconds`;
 - observed hourly growth for trajectories and duration;
-- UTC daily growth for tasks.
+- the latest complete UTC day's task growth.
 
-`.github/workflows/realtime-stats.yml` runs at minute 17 of every hour (and can
-also be run manually). It queries PostgreSQL in a read-only transaction, writes
-only the sanitized aggregate JSON to `main` through the GitHub Contents API,
-and explicitly requests a GitHub Pages rebuild.
+`.github/workflows/realtime-stats.yml` has redundant scheduler opportunities at
+minutes 17, 37, and 57 (and can also be run manually). A freshness gate skips
+the backup slots when the latest snapshot is less than 50 minutes old, so the
+database is still queried roughly once per hour while delayed GitHub cron events
+have another chance to refresh the page. Successful runs use a read-only
+PostgreSQL transaction, write only the sanitized aggregate JSON to `main`
+through the GitHub Contents API, and explicitly request a GitHub Pages rebuild.
 
 The production path runs entirely on GitHub-hosted infrastructure. It does not
 use a developer laptop, a local SSH alias, a VPN session, or a self-hosted
@@ -65,18 +68,18 @@ the first row, while tasks and trajectory duration share the second row.
 
 Changed digits use upward rolling reels with a short low-to-high stagger,
 inspired by live mileage counters. Visitors who prefer reduced motion receive
-the same values without the reel animation. Trajectory and duration growth
+the same real-time values without the reel animation. Trajectory and duration growth
 comes exclusively from the sanitized database delta; no artificial catch-up
 amount is added. The one bootstrap-day task estimate is marked explicitly and
 is replaced by snapshot-based daily differences from the next UTC date onward.
 
-The current checked-in comparison starts from 1,530,275 trajectories, 1,816
-tasks, and 13,645 h 7 m. The initial task badge uses the latest complete UTC
-day's increase, `Est. +9 / day`. Starting with the next UTC date, the collector
-stores the previous date's last published task total and reports the current
-date's non-negative difference. If the prior snapshot is more than six hours
-old at the UTC date boundary, the daily badge is hidden instead of labeling a
-stale or multi-day increase as one day.
+The initial task badge uses the latest complete UTC day's estimated increase,
+`Est. +9 / day` (1,807 to 1,816 Tasks). It remains fixed for the whole current
+UTC day. At the next UTC boundary, the collector publishes the completed day's
+non-negative difference and starts a new baseline, so an unfinished day never
+briefly appears as `0 / day`. If the prior snapshot is more than six hours old
+at the UTC date boundary, the daily badge is hidden for that day and the
+collector starts a fresh baseline so it can recover automatically the next day.
 Hourly Actions refreshes replace the trajectory and duration comparison with
 the next pair of database snapshots. Public totals are monotonic: metric arrows
 show upward growth or a steady value, and database corrections never decrease a
