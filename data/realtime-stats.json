@@ -9,10 +9,10 @@
     "trajectories": 0.0,
     "trajectory_duration_seconds": 0.0
   },
-  "previous_sampled_at": "2026-08-15T05:44:33Z",
-  "sample_id": "adc383f4366aed2d",
-  "sample_interval_seconds": 3087.0,
-  "sampled_at": "2026-08-15T06:36:00Z",
+  "previous_sampled_at": "2026-08-15T06:36:00Z",
+  "sample_id": "3da6a1c5b2b81873",
+  "sample_interval_seconds": 4319.0,
+  "sampled_at": "2026-08-15T07:47:59Z",
   "schema_version": 1,
   "status": "ok",
   "tasks_daily": {
