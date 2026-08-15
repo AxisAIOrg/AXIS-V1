@@ -9,18 +9,18 @@
     "trajectories": 0.0,
     "trajectory_duration_seconds": 0.0
   },
-  "previous_sampled_at": "2026-08-14T22:31:07Z",
-  "sample_id": "13e757123c36756c",
-  "sample_interval_seconds": 3488.0,
-  "sampled_at": "2026-08-14T23:29:15Z",
+  "previous_sampled_at": "2026-08-14T23:29:15Z",
+  "sample_id": "2ae190a6124158f5",
+  "sample_interval_seconds": 8105.0,
+  "sampled_at": "2026-08-15T01:44:20Z",
   "schema_version": 1,
   "status": "ok",
   "tasks_daily": {
-    "baseline_total": 2713,
+    "baseline_total": 2835,
     "basis": "verified",
-    "display_utc_date": "2026-08-13",
-    "increase": 70,
-    "utc_date": "2026-08-14"
+    "display_utc_date": "2026-08-14",
+    "increase": 122,
+    "utc_date": "2026-08-15"
   },
   "totals": {
     "tasks": 2835,
