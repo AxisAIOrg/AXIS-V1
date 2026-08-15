@@ -1,6 +1,6 @@
 {
   "delta_since_previous": {
-    "tasks": 1,
+    "tasks": 0,
     "trajectories": 0,
     "trajectory_duration_seconds": 0.0
   },
@@ -9,10 +9,10 @@
     "trajectories": 0.0,
     "trajectory_duration_seconds": 0.0
   },
-  "previous_sampled_at": "2026-08-15T04:29:20Z",
-  "sample_id": "c07900b335cc6014",
-  "sample_interval_seconds": 4513.0,
-  "sampled_at": "2026-08-15T05:44:33Z",
+  "previous_sampled_at": "2026-08-15T05:44:33Z",
+  "sample_id": "adc383f4366aed2d",
+  "sample_interval_seconds": 3087.0,
+  "sampled_at": "2026-08-15T06:36:00Z",
   "schema_version": 1,
   "status": "ok",
   "tasks_daily": {
