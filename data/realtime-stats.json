@@ -1,18 +1,18 @@
 {
   "delta_since_previous": {
     "tasks": 0,
-    "trajectories": 2739,
+    "trajectories": 2056,
     "trajectory_duration_seconds": 0.0
   },
   "growth_per_hour": {
     "tasks": null,
-    "trajectories": 1853.11,
+    "trajectories": 1889.609,
     "trajectory_duration_seconds": 0.0
   },
-  "previous_sampled_at": "2026-08-17T09:22:00Z",
-  "sample_id": "c2dda0891c3289ca",
-  "sample_interval_seconds": 5321.0,
-  "sampled_at": "2026-08-17T10:50:41Z",
+  "previous_sampled_at": "2026-08-17T10:50:41Z",
+  "sample_id": "7b30925e1179fb1e",
+  "sample_interval_seconds": 3917.0,
+  "sampled_at": "2026-08-17T11:55:58Z",
   "schema_version": 1,
   "status": "ok",
   "tasks_daily": {
@@ -24,7 +24,7 @@
   },
   "totals": {
     "tasks": 2954,
-    "trajectories": 2802257,
+    "trajectories": 2804313,
     "trajectory_duration_seconds": 147333852.472
   }
 }
