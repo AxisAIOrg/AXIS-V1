@@ -19,9 +19,9 @@
   const RENDER_INTERVAL_MS = 250;
   const REDUCED_MOTION_RENDER_INTERVAL_MS = 1000;
   const FALLBACK_TOTALS = {
-    trajectories: 1530275,
-    tasks: 1816,
-    duration: 49122405
+    trajectories: 3167436,
+    tasks: 3217,
+    duration: 147333852
   };
 
   const metricDefinitions = {
