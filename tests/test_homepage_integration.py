@@ -99,9 +99,9 @@ class HomepageIntegrationTests(unittest.TestCase):
         homepage = Path("index.html").read_text(encoding="utf-8")
         script = Path("realtime-stats.js").read_text(encoding="utf-8")
 
-        for value in ("1,530,275", "1,816", "13,645 h 7 m"):
+        for value in ("3,167,436", "3,217", "40,926 h 4 m"):
             self.assertIn(value, homepage)
-        for value in ("1530275", "1816", "49122405"):
+        for value in ("3167436", "3217", "147333852"):
             self.assertIn(value, script)
         self.assertNotIn("Collecting hourly baseline", homepage)
         self.assertNotIn("Collecting hourly baseline", script)
