@@ -185,17 +185,19 @@ test("checked-in database delta plays from the previous totals to the latest tot
 
 test("tasks use the measured total and a daily growth label", () => {
   const value = stats.parseSnapshot(checkedInPayload);
-  assert.equal(value.totals.tasks, 1822);
+  assert.equal(value.totals.tasks, checkedInPayload.totals.tasks);
   assert.deepEqual(value.tasksDaily, {
-    utcDate: "2026-07-24",
-    displayUtcDate: "2026-07-23",
-    baselineTotal: 1816,
-    increase: 9,
-    basis: "estimated"
+    utcDate: checkedInPayload.tasks_daily.utc_date,
+    displayUtcDate: checkedInPayload.tasks_daily.display_utc_date,
+    baselineTotal: checkedInPayload.tasks_daily.baseline_total,
+    increase: checkedInPayload.tasks_daily.increase,
+    basis: checkedInPayload.tasks_daily.basis
   });
+  const dailyPrefix = checkedInPayload.tasks_daily.basis === "estimated" ? "Est. " : "";
+  const dailySign = checkedInPayload.tasks_daily.increase > 0 ? "+" : "";
   assert.equal(
     stats.formatTasksDailyRate(value.tasksDaily),
-    "Est. +9 / day"
+    `${dailyPrefix}${dailySign}${checkedInPayload.tasks_daily.increase} / day`
   );
   assert.equal(
     stats.formatTasksDailyRate({
